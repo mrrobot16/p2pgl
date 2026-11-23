@@ -1,6 +1,6 @@
 # Log: a log line for every request
 
-Status: in progress.
+Status: done (2026-11-17, last commit b83fb6a).
 
 One entry per commit-sized unit, newest last, written when the unit is ready
 to commit. The commit hash is filled in once the maintainer has committed.
@@ -123,4 +123,4 @@ to commit. The commit hash is filled in once the maintainer has committed.
   lines and no request line; `on` removed the line and the variable, served,
   and logged a stranger's `/health` again. Gate: 1773 passed, 0 failed, 0
   ignored.
-- **Commit:** —
+- **Commit:** b83fb6a

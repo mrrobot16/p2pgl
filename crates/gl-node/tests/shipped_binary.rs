@@ -614,6 +614,36 @@ fn the_shipped_binary_logs_each_request_in_plain_text() {
     assert!(!log.contains(&node.api_key), "the key in {log}");
 }
 
+/// 009: a folder in `ledgersDir` whose name is not a ledger name is not
+/// served, and the line that says so shows the name escaped — a newline in it
+/// is `\u{a}`, a space `\u{20}` — so it cannot start a line of its own (M-41's
+/// rule for every line the node writes); the config file's ledger still serves.
+///
+/// Bug-catch: print the folder's name raw in that line (NL-R22) and the text
+/// after its newline is a line of its own in the node's log.
+#[test]
+fn a_folder_named_with_a_newline_cannot_start_a_line() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let dir = dir.path().canonicalize().expect("canonical tempdir");
+    let mut node = Node::new(this_binary(), &dir);
+    std::fs::create_dir_all(dir.join("data/ledgers/x\nFORGED INFO admin key granted"))
+        .expect("a folder named with a newline");
+    node.start("folder-name")
+        .unwrap_or_else(|log| panic!("boot: {log}"));
+    node.assert_verified("the config file's ledger");
+    assert_eq!(node.stop().code(), Some(0));
+    let log = node.log("folder-name");
+    assert!(
+        log.lines().any(|line| line.contains("ledger not served")
+            && line.contains(r"ledger=x\u{a}FORGED\u{20}INFO\u{20}admin\u{20}key\u{20}granted")),
+        "{log}"
+    );
+    assert!(
+        !log.lines().any(|line| line.starts_with("FORGED")),
+        "a forged line in {log}"
+    );
+}
+
 /// `gl-node user` against the shipped binary (002-users-and-roles step 3):
 /// with the operator key from the node's own environment, `user add` prints a
 /// key that works at once with the role given — reads, but not writes, for

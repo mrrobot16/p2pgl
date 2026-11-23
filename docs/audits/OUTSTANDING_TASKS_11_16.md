@@ -55,10 +55,13 @@ for served names only and were already safe.
 
 **Done in 009 unit 1.** A folder in `ledgersDir` whose name is not a valid
 ledger name is logged raw (`error!(ledger = %name, …, "ledger not served")`,
-`crates/gl-node/src/main.rs:595`). The name comes from the server's
+`crates/gl-node/src/main.rs:595` at `1a16f2a`). The name comes from the server's
 filesystem, not a caller, so it is not a finding. 009's intent ("a newline in
 … a ledger name cannot start a second line … in any other line the node
-writes") covers it; unit 1 escapes it (`request_log::escaped`).
+writes") covers it; unit 1 escapes it (`request_log::escaped`). Pinned
+afterwards (2026-11-23, 009's follow-up): the shipped binary's test
+`a_folder_named_with_a_newline_cannot_start_a_line`, and NL-R22 in
+`scripts/revert_specs/node_logs.json` bites.
 
 ## ☑ T105 — No shipped image sets `RUST_LOG` (L-159) — S
 
@@ -115,7 +118,7 @@ that release's installer. **Residuals:**
   each `RUST_LOG=info` put back: 3 of 3 bite.
 - CHANGELOG `[Unreleased]` *Security*.
 
-**Commit:** —
+**Commit:** b83fb6a (with 010).
 
 ## Accepted by the maintainer
 

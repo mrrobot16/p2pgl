@@ -148,3 +148,26 @@ to commit. The commit hash is filled in once the maintainer has committed.
   pattern also takes a quoted name (`ledger="acme"`, a `?` field), and the
   field `ledger` only.
 - **Commit:** e5f93ec
+
+## 2026-11-23 — A folder's escaped name pinned (follow-up to unit 1)
+
+- **What changed:** no behaviour. Unit 1 escaped an invalid `ledgersDir`
+  folder's name in the boot line `ledger not served` (`main.rs`,
+  `request_log::escaped(&name, 128)`), but no test or revert check held
+  it: printing the name raw again failed nothing. Added the shipped
+  binary's test `a_folder_named_with_a_newline_cannot_start_a_line`: a
+  folder named `x⏎FORGED INFO admin key granted`, the node boots and
+  serves its own ledger, the line shows `ledger=x\u{a}FORGED\u{20}…`, and
+  no line starts with `FORGED`. Also corrected two stale records: T105's
+  commit (`b83fb6a`) in `OUTSTANDING_TASKS_11_16.md`, with this proof
+  under T104's note on the folder name; 010 done (`b83fb6a`) in its log
+  and the index.
+- **Gate:** `scripts/gate.sh` — 1774 passed, 0 failed, 0 ignored.
+- **Revert checks:** NL-R22 in `scripts/revert_specs/node_logs.json` (the
+  name printed raw) — 1 of 1 bites; every anchor in the file occurs once.
+- **Review:** no important findings; the revert fails both assertions, the
+  escaped line and the forged one. Taken: the tracker's `main.rs:595` is
+  pinned to `1a16f2a`, where it was. Left: 009's status line and index row
+  keep `e5f93ec`, its last unit; this is a follow-up, not a unit.
+- **Departures from the plan:** none (a follow-up the plan did not list).
+- **Commit:** —

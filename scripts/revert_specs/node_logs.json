@@ -306,5 +306,19 @@
         "the_request_log_switches_build_on_the_nodes_default_filter"
       ]
     ]
+  },
+  "NL-R22-a-folders-name-printed-raw": {
+    "file": "crates/gl-node/src/main.rs",
+    "old": "                    ledger = %request_log::escaped(&name, 128),",
+    "new": "                    ledger = %name,",
+    "runs": [
+      [
+        "-p",
+        "gl-node",
+        "--test",
+        "shipped_binary",
+        "a_folder_named_with_a_newline_cannot_start_a_line"
+      ]
+    ]
   }
 }
