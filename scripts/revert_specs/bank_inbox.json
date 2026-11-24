@@ -172,5 +172,17 @@
     "old": "        crate::config::WebhookImport::Entries => SYNC,",
     "new": "        crate::config::WebhookImport::Entries => FETCH,",
     "runs": [["-p", "gl-node", "--bin", "gl-node", "a_webhook_syncs_the_bank_on_its_own"]]
+  },
+  "BI-R29-booking-writes-no-line": {
+    "file": "crates/gl-node/src/graphql/bank_inbox.rs",
+    "old": "    tracing::info!(\n        booked,\n        not_booked = bookings.len() - booked,\n        \"bank transactions booked from the inbox\"\n    );\n",
+    "new": "",
+    "runs": [["-p", "gl-node", "--bin", "gl-node", "mapping_booking_and_ignoring_each_write_a_line"]]
+  },
+  "BI-R30-ignoring-writes-no-line": {
+    "file": "crates/gl-node/src/graphql/bank_inbox.rs",
+    "old": "            tracing::info!(\n                ignored,\n                not_ignored = bookings.len() - ignored,\n                \"bank transactions ignored\"\n            );\n",
+    "new": "",
+    "runs": [["-p", "gl-node", "--bin", "gl-node", "mapping_booking_and_ignoring_each_write_a_line"]]
   }
 }

@@ -502,3 +502,51 @@ to commit. The commit hash is filled in once the maintainer has committed.
   bite.
 - **Departures from the plan:** none (step 6f added to `plan.md`).
 - **Commit:** fcec9e2 (with 008 unit 3)
+
+## 2026-11-23 — The first run against Plaid's sandbox, and its log lines
+
+- **The run** (the maintainer, Insomnia, a local node from
+  `scripts/run_local_node.sh --source`, a fresh ledger; every earlier test
+  ran against the mock): `connectSandboxBank` (First Platypus Bank, 14
+  accounts, the token stored encrypted), `mapBankAccount` (Plaid Checking),
+  `fetchBankTransactions` (19 added, 30 of unmapped accounts skipped), the
+  inbox listed, one booked (`classifyBankTransactions`: an entry with its
+  `^plaid-` link in the `.bean`, the journal the same); a second fetch and a
+  `syncBank` took nothing (the shared cursor; the 18 waiting left alone);
+  `resetSandboxLogin`, then a fetch refused with `PLAID_ERROR` /
+  `plaidCode: ITEM_LOGIN_REQUIRED` (an error, nothing stored), the bank's
+  `lastErrorCode` set and `lastSyncedAt` left at the last finished sync; an
+  update-mode link token (Plaid set its expiry about 30 minutes out);
+  `disconnectBank`: no bank, no token, the inbox emptied, the books as they
+  were. No bug found. Not run for real yet: webhooks (they need a public
+  address), banks that log in on their own site (Link, the client app's),
+  and `syncBank` importing a bank's history.
+- **What changed:** two things the run showed. The request log said
+  `operation=-` for every call: the collection's queries were unnamed, and
+  the node logs `operationName`. Every request in
+  `docs/api/openledger.insomnia.json` is now named and sends it (46; the
+  name from its first field, four chosen). And booking, ignoring, mapping
+  and unmapping wrote nothing of their own: each now writes an `INFO` line
+  (`graphql/bank_inbox.rs`, `plaid.rs`) — counts for booking and ignoring,
+  the bank, account, ledger account and start date for a mapping; never an
+  amount, a payee or a reason. README (*Request log*, *Bank connections
+  (Plaid)*), CHANGELOG *Added*. Also: the run left `data/secrets.json`
+  (the bank tokens, encrypted) and `data/bank-inbox.json` untracked but not
+  ignored, one `git add` from a commit; `.gitignore` now names both.
+- **Tests:** `mapping_booking_and_ignoring_each_write_a_line` (unmap, map,
+  book one of two, ignore one of two, inside one capture; no amount, payee
+  or reason in what was logged).
+- **Gate:** `scripts/gate.sh` — 1775 passed, 0 failed, 0 ignored.
+- **Revert checks:** BI-R29, BI-R30 (`bank_inbox.json`), PL-R127, PL-R128
+  (`plaid.json`) — 4 of 4 bite; every anchor in both files occurs once.
+- **Review:** nothing important. Taken: the README says a call writes its
+  line only when it runs to its end (one cut short by the timeout has the
+  request line alone), and that `not_booked` counts `ALREADY_BOOKED`, which
+  leaves the inbox; the test captures every crate at `INFO`, not only
+  `gl_node`, so the ledger's lines are checked for the amount and payee
+  too; `.gitignore` also names the temp files a crashed write leaves
+  (`.secrets.json.*.tmp`, `.bank-inbox.json.*.tmp`); the CHANGELOG no longer
+  reads as if unmapping logged the ledger account. Left: a field on the
+  mapped line saying the bank's history will be fetched again.
+- **Departures from the plan:** none (a finding of the run, not a plan step).
+- **Commit:** —

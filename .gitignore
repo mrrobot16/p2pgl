@@ -15,6 +15,12 @@ api.key
 *.api.key
 *.bean.lock
 *.bean.journal
+# A ledger folder's node-private files: bank tokens, encrypted (007), and the
+# bank-feed inbox (008) — a local run writes them under data/
+secrets.json
+bank-inbox.json
+.secrets.json.*.tmp
+.bank-inbox.json.*.tmp
 .do_not_commit_please_ignore
 # Per-installation mesh configs written by deploy/mesh-init.sh
 deploy/mesh/

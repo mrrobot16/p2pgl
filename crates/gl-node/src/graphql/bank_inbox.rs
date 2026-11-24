@@ -528,6 +528,13 @@ pub(super) async fn classify_bank_transactions(
             tracing::warn!(%error, booked = leaving.len(), "booked transactions stay in the bank inbox for now");
         }
     }
+    // Counts only: no transaction's amount, payee or text reaches the log.
+    let booked = bookings.iter().filter(|booking| booking.ok).count();
+    tracing::info!(
+        booked,
+        not_booked = bookings.len() - booked,
+        "bank transactions booked from the inbox"
+    );
     Ok(bookings)
 }
 
@@ -696,7 +703,16 @@ pub(super) async fn ignore_bank_transactions(
             .collect::<Vec<_>>()
     });
     match outcome {
-        Ok(bookings) => Ok(bookings),
+        Ok(bookings) => {
+            // Counts only, as for booking: no reason a caller wrote is logged.
+            let ignored = bookings.iter().filter(|booking| booking.ok).count();
+            tracing::info!(
+                ignored,
+                not_ignored = bookings.len() - ignored,
+                "bank transactions ignored"
+            );
+            Ok(bookings)
+        }
         Err(error) => {
             let error = failed(error.into());
             Ok(items
@@ -1224,6 +1240,87 @@ mod tests {
             inbox["data"]["bankInbox"]["transactions"][0]["transactionId"],
             "t1"
         );
+    }
+
+    /// 007 and 008, after the first run against Plaid's sandbox: unmapping
+    /// and mapping a bank account, booking and ignoring from the inbox each
+    /// write a line at `INFO` — the bank and account mapped, how many were
+    /// booked or ignored and how many not — and none carries a transaction's
+    /// amount, payee or the reason a bookkeeper wrote.
+    ///
+    /// Bug-catch: drop any of the four lines (BI-R29, BI-R30, PL-R127,
+    /// PL-R128) and the step that changes the books, or what the bank feeds
+    /// into them, leaves no trace in the node's log but its request line.
+    #[tokio::test]
+    async fn mapping_booking_and_ignoring_each_write_a_line() {
+        let fixture = waiting().await;
+        let schema = &fixture.schema;
+        // Every crate at INFO, as a node logs by default: the ledger's lines
+        // must not carry the amount or the payee either.
+        let ((), logged) = crate::test_support::capture_logs("info", async {
+            let body = operator(
+                schema,
+                &format!(
+                    r#"mutation {{ unmapBankAccount(itemId: "{ITEM_ID}", accountId: "acc1") {{ itemId }} }}"#
+                ),
+            )
+            .await;
+            assert!(body["errors"].is_null(), "{body}");
+            let body = operator(
+                schema,
+                &format!(
+                    r#"mutation {{ mapBankAccount(itemId: "{ITEM_ID}", accountId: "acc1", ledgerAccount: "Assets:Bank:Checking", importFrom: "2026-01-01") {{ itemId }} }}"#
+                ),
+            )
+            .await;
+            assert!(body["errors"].is_null(), "{body}");
+            let body = run(
+                schema,
+                Role::Write,
+                &classify(
+                    r#"{ transactionId: "t1", account: "Expenses:Office" },
+                       { transactionId: "zz", account: "Expenses:Office" }"#,
+                ),
+            )
+            .await;
+            assert!(body["errors"].is_null(), "{body}");
+            let body = run(
+                schema,
+                Role::Write,
+                &ignore(
+                    r#"{ transactionId: "t4", reason: "a transfer entered by hand" },
+                       { transactionId: "zz" }"#,
+                ),
+            )
+            .await;
+            assert!(body["errors"].is_null(), "{body}");
+        })
+        .await;
+        let line = |text: &str| logged.lines().any(|line| line.contains(text));
+        assert!(
+            line(&format!(
+                "bank account unmapped item_id={ITEM_ID} account_id=acc1"
+            )),
+            "{logged}"
+        );
+        assert!(
+            line(&format!(
+                "bank account mapped item_id={ITEM_ID} account_id=acc1 \
+                 ledger_account=Assets:Bank:Checking import_from=2026-01-01"
+            )),
+            "{logged}"
+        );
+        assert!(
+            line("bank transactions booked from the inbox booked=1 not_booked=1"),
+            "{logged}"
+        );
+        assert!(
+            line("bank transactions ignored ignored=1 not_ignored=1"),
+            "{logged}"
+        );
+        for private in ["12.34", "Corner Shop", "a transfer entered by hand"] {
+            assert!(!logged.contains(private), "{private} in {logged}");
+        }
     }
 
     /// 008: an ignored transaction leaves the inbox with its reason, writes

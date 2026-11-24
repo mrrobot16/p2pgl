@@ -33,6 +33,16 @@ break compatibility.
   the node (its earlier log lines go with the old container), and changes
   nothing if a `RUST_LOG` it did not write is there or in `secrets.env`.
   Alone, it says which, and whether the running node was started with it.
+- **Bank-feed lines in the node's log** (found in the first run against
+  Plaid's sandbox): booking and ignoring from the inbox each write a line
+  with counts (`booked=… not_booked=…`, `ignored=… not_ignored=…`);
+  mapping a bank account writes the bank, the account, the ledger account
+  and the start date, and unmapping one the bank and the account. No
+  amount, payee or reason is logged.
+  README *Bank connections (Plaid)*.
+- **Every request in `docs/api/openledger.insomnia.json` is named** and
+  sends its `operationName`, so the request log shows `operation=SyncBank`
+  rather than `-`.
 
 ### Security
 

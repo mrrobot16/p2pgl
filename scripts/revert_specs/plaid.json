@@ -818,5 +818,17 @@
     "old": "let local = self.environment == PlaidEnvironment::Sandbox",
     "new": "let local = true || self.environment == PlaidEnvironment::Sandbox",
     "runs": [["-p", "gl-node", "--bin", "gl-node", "a_ledgers_plaid_section_is_checked"]]
+  },
+  "PL-R127-mapping-writes-no-line": {
+    "file": "crates/gl-node/src/plaid.rs",
+    "old": "        info!(\n            item_id = %item_id,\n            account_id = %account_id,\n            ledger_account = %crate::request_log::escaped(ledger_account, 128),\n            import_from = %import_from,\n            \"bank account mapped\"\n        );\n",
+    "new": "",
+    "runs": [["-p", "gl-node", "--bin", "gl-node", "mapping_booking_and_ignoring_each_write_a_line"]]
+  },
+  "PL-R128-unmapping-writes-no-line": {
+    "file": "crates/gl-node/src/plaid.rs",
+    "old": "        info!(item_id = %item_id, account_id = %account_id, \"bank account unmapped\");\n",
+    "new": "",
+    "runs": [["-p", "gl-node", "--bin", "gl-node", "mapping_booking_and_ignoring_each_write_a_line"]]
   }
 }

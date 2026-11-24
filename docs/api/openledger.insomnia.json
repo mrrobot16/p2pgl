@@ -115,7 +115,7 @@
       "url": "{{ _.base_url }}{{ _.graphql_path }}",
       "body": {
         "mimeType": "application/graphql",
-        "text": "{\"query\":\"{ accounts { name openedOn closedOn currencies } }\",\"variables\":{}}"
+        "text": "{\"query\":\"query Accounts { accounts { name openedOn closedOn currencies } }\",\"variables\":{},\"operationName\":\"Accounts\"}"
       },
       "headers": [
         {
@@ -140,7 +140,7 @@
       "url": "{{ _.base_url }}{{ _.graphql_path }}",
       "body": {
         "mimeType": "application/graphql",
-        "text": "{\"query\":\"query($at: Date!) { trialBalance(at: $at) { at totalDebit totalCredit exact rows { account debit credit exact } } }\",\"variables\":{\"at\":\"2026-12-31\"}}"
+        "text": "{\"query\":\"query TrialBalance($at: Date!) { trialBalance(at: $at) { at totalDebit totalCredit exact rows { account debit credit exact } } }\",\"variables\":{\"at\":\"2026-12-31\"},\"operationName\":\"TrialBalance\"}"
       },
       "headers": [
         {
@@ -165,7 +165,7 @@
       "url": "{{ _.base_url }}{{ _.graphql_path }}",
       "body": {
         "mimeType": "application/graphql",
-        "text": "{\"query\":\"query($at: Date!) { balanceSheet(at: $at) { at exact assets { account balances { number currency } exact } liabilities { account balances { number currency } exact } equity { account balances { number currency } exact } } }\",\"variables\":{\"at\":\"2026-12-31\"}}"
+        "text": "{\"query\":\"query BalanceSheet($at: Date!) { balanceSheet(at: $at) { at exact assets { account balances { number currency } exact } liabilities { account balances { number currency } exact } equity { account balances { number currency } exact } } }\",\"variables\":{\"at\":\"2026-12-31\"},\"operationName\":\"BalanceSheet\"}"
       },
       "headers": [
         {
@@ -190,7 +190,7 @@
       "url": "{{ _.base_url }}{{ _.graphql_path }}",
       "body": {
         "mimeType": "application/graphql",
-        "text": "{\"query\":\"query($from: Date!, $to: Date!) { incomeStatement(from: $from, to: $to) { from to exact net { number currency } income { account balances { number currency } } expenses { account balances { number currency } } } }\",\"variables\":{\"from\":\"2026-01-01\",\"to\":\"2026-12-31\"}}"
+        "text": "{\"query\":\"query IncomeStatement($from: Date!, $to: Date!) { incomeStatement(from: $from, to: $to) { from to exact net { number currency } income { account balances { number currency } } expenses { account balances { number currency } } } }\",\"variables\":{\"from\":\"2026-01-01\",\"to\":\"2026-12-31\"},\"operationName\":\"IncomeStatement\"}"
       },
       "headers": [
         {
@@ -215,7 +215,7 @@
       "url": "{{ _.base_url }}{{ _.graphql_path }}",
       "body": {
         "mimeType": "application/graphql",
-        "text": "{\"query\":\"query($account: String, $from: Date, $to: Date, $limit: Int!, $offset: Int!) { journal(account: $account, from: $from, to: $to, limit: $limit, offset: $offset) { txid date flag payee narration tags links enteredBy enteredByName postings { account amount { number currency } } } }\",\"variables\":{\"account\":null,\"from\":null,\"to\":null,\"limit\":100,\"offset\":0}}"
+        "text": "{\"query\":\"query Journal($account: String, $from: Date, $to: Date, $limit: Int!, $offset: Int!) { journal(account: $account, from: $from, to: $to, limit: $limit, offset: $offset) { txid date flag payee narration tags links enteredBy enteredByName postings { account amount { number currency } } } }\",\"variables\":{\"account\":null,\"from\":null,\"to\":null,\"limit\":100,\"offset\":0},\"operationName\":\"Journal\"}"
       },
       "headers": [
         {
@@ -240,7 +240,7 @@
       "url": "{{ _.base_url }}{{ _.graphql_path }}",
       "body": {
         "mimeType": "application/graphql",
-        "text": "{\"query\":\"query($txid: TxId!) { transaction(txid: $txid) { txid date flag payee narration postings { account amount { number currency } } author signature parents enteredByName } }\",\"variables\":{\"txid\":\"0000000000000000000000000000000000000000000000000000000000000000\"}}"
+        "text": "{\"query\":\"query Transaction($txid: TxId!) { transaction(txid: $txid) { txid date flag payee narration postings { account amount { number currency } } author signature parents enteredByName } }\",\"variables\":{\"txid\":\"0000000000000000000000000000000000000000000000000000000000000000\"},\"operationName\":\"Transaction\"}"
       },
       "headers": [
         {
@@ -265,7 +265,7 @@
       "url": "{{ _.base_url }}{{ _.graphql_path }}",
       "body": {
         "mimeType": "application/graphql",
-        "text": "{\"query\":\"query($name: String!, $at: Date) { account(name: $name, at: $at) { account exact balances { number currency } } }\",\"variables\":{\"name\":\"Assets:Bank:Checking\",\"at\":null}}"
+        "text": "{\"query\":\"query Account($name: String!, $at: Date) { account(name: $name, at: $at) { account exact balances { number currency } } }\",\"variables\":{\"name\":\"Assets:Bank:Checking\",\"at\":null},\"operationName\":\"Account\"}"
       },
       "headers": [
         {
@@ -290,7 +290,7 @@
       "url": "{{ _.base_url }}{{ _.graphql_path }}",
       "body": {
         "mimeType": "application/graphql",
-        "text": "{\"query\":\"{ verify { ok nodesChecked errors truncated quarantined quarantinedTotal unparsableBlocks balanceAssertions { evaluated passed failed ok failures { account date expected actual currency } } } }\",\"variables\":{}}"
+        "text": "{\"query\":\"query Verify { verify { ok nodesChecked errors truncated quarantined quarantinedTotal unparsableBlocks balanceAssertions { evaluated passed failed ok failures { account date expected actual currency } } } }\",\"variables\":{},\"operationName\":\"Verify\"}"
       },
       "headers": [
         {
@@ -315,7 +315,7 @@
       "url": "{{ _.base_url }}{{ _.graphql_path }}",
       "body": {
         "mimeType": "application/graphql",
-        "text": "{\"query\":\"{ health { status heads peers version } peers { id } }\",\"variables\":{}}"
+        "text": "{\"query\":\"query Health { health { status heads peers version } peers { id } }\",\"variables\":{},\"operationName\":\"Health\"}"
       },
       "headers": [
         {
@@ -340,7 +340,7 @@
       "url": "{{ _.base_url }}{{ _.graphql_path }}",
       "body": {
         "mimeType": "application/graphql",
-        "text": "{\"query\":\"mutation($name: String!, $date: Date!, $currencies: String) { openAccount(name: $name, date: $date, currencies: $currencies) }\",\"variables\":{\"name\":\"Assets:Bank:Checking\",\"date\":\"2026-01-01\",\"currencies\":\"USD\"}}"
+        "text": "{\"query\":\"mutation OpenAccount($name: String!, $date: Date!, $currencies: String) { openAccount(name: $name, date: $date, currencies: $currencies) }\",\"variables\":{\"name\":\"Assets:Bank:Checking\",\"date\":\"2026-01-01\",\"currencies\":\"USD\"},\"operationName\":\"OpenAccount\"}"
       },
       "headers": [
         {
@@ -365,7 +365,7 @@
       "url": "{{ _.base_url }}{{ _.graphql_path }}",
       "body": {
         "mimeType": "application/graphql",
-        "text": "{\"query\":\"mutation($name: String!, $date: Date!) { openAccount(name: $name, date: $date) }\",\"variables\":{\"name\":\"Income:Sales\",\"date\":\"2026-01-01\"}}"
+        "text": "{\"query\":\"mutation OpenAccount($name: String!, $date: Date!) { openAccount(name: $name, date: $date) }\",\"variables\":{\"name\":\"Income:Sales\",\"date\":\"2026-01-01\"},\"operationName\":\"OpenAccount\"}"
       },
       "headers": [
         {
@@ -390,7 +390,7 @@
       "url": "{{ _.base_url }}{{ _.graphql_path }}",
       "body": {
         "mimeType": "application/graphql",
-        "text": "{\"query\":\"mutation($input: TransactionInput!) { appendTransaction(input: $input) { txid date narration alreadyExisted enteredByName postings { account amount { number currency } } } }\",\"variables\":{\"input\":{\"date\":\"2026-01-15\",\"flag\":\"*\",\"payee\":\"Acme Client\",\"narration\":\"Invoice 1001\",\"tags\":[],\"links\":[],\"postings\":[{\"account\":\"Assets:Bank:Checking\",\"amount\":{\"number\":\"1500.00\",\"currency\":\"USD\"}},{\"account\":\"Income:Sales\",\"amount\":{\"number\":\"-1500.00\",\"currency\":\"USD\"}}]}}}"
+        "text": "{\"query\":\"mutation AppendTransaction($input: TransactionInput!) { appendTransaction(input: $input) { txid date narration alreadyExisted enteredByName postings { account amount { number currency } } } }\",\"variables\":{\"input\":{\"date\":\"2026-01-15\",\"flag\":\"*\",\"payee\":\"Acme Client\",\"narration\":\"Invoice 1001\",\"tags\":[],\"links\":[],\"postings\":[{\"account\":\"Assets:Bank:Checking\",\"amount\":{\"number\":\"1500.00\",\"currency\":\"USD\"}},{\"account\":\"Income:Sales\",\"amount\":{\"number\":\"-1500.00\",\"currency\":\"USD\"}}]}},\"operationName\":\"AppendTransaction\"}"
       },
       "headers": [
         {
@@ -415,7 +415,7 @@
       "url": "{{ _.base_url }}{{ _.graphql_path }}",
       "body": {
         "mimeType": "application/graphql",
-        "text": "{\"query\":\"mutation($input: TransactionInput!) { appendTransaction(input: $input) { txid postings { account amount { number currency } } } }\",\"variables\":{\"input\":{\"date\":\"2026-01-16\",\"flag\":\"*\",\"narration\":\"Elided posting balances it\",\"postings\":[{\"account\":\"Assets:Bank:Checking\",\"amount\":{\"number\":\"250.00\",\"currency\":\"USD\"}},{\"account\":\"Income:Sales\"}]}}}"
+        "text": "{\"query\":\"mutation AppendTransaction($input: TransactionInput!) { appendTransaction(input: $input) { txid postings { account amount { number currency } } } }\",\"variables\":{\"input\":{\"date\":\"2026-01-16\",\"flag\":\"*\",\"narration\":\"Elided posting balances it\",\"postings\":[{\"account\":\"Assets:Bank:Checking\",\"amount\":{\"number\":\"250.00\",\"currency\":\"USD\"}},{\"account\":\"Income:Sales\"}]}},\"operationName\":\"AppendTransaction\"}"
       },
       "headers": [
         {
@@ -440,7 +440,7 @@
       "url": "{{ _.base_url }}{{ _.graphql_path }}",
       "body": {
         "mimeType": "application/graphql",
-        "text": "{\"query\":\"mutation($name: String!, $date: Date!) { closeAccount(name: $name, date: $date) }\",\"variables\":{\"name\":\"Assets:Bank:Checking\",\"date\":\"2026-12-31\"}}"
+        "text": "{\"query\":\"mutation CloseAccount($name: String!, $date: Date!) { closeAccount(name: $name, date: $date) }\",\"variables\":{\"name\":\"Assets:Bank:Checking\",\"date\":\"2026-12-31\"},\"operationName\":\"CloseAccount\"}"
       },
       "headers": [
         {
@@ -465,7 +465,7 @@
       "url": "{{ _.base_url }}{{ _.graphql_path }}",
       "body": {
         "mimeType": "application/graphql",
-        "text": "{\"query\":\"{ accessList { userId name role expires expired } }\",\"variables\":{}}"
+        "text": "{\"query\":\"query AccessList { accessList { userId name role expires expired } }\",\"variables\":{},\"operationName\":\"AccessList\"}"
       },
       "headers": [
         {
@@ -490,7 +490,7 @@
       "url": "{{ _.base_url }}{{ _.graphql_path }}",
       "body": {
         "mimeType": "application/graphql",
-        "text": "{\"query\":\"mutation($name: String, $role: AccessRole!, $expires: Date) { grantAccess(name: $name, role: $role, expires: $expires) { userId name role expires key } }\",\"variables\":{\"name\":\"Ana Ruiz\",\"role\":\"WRITE\",\"expires\":null}}"
+        "text": "{\"query\":\"mutation GrantAccess($name: String, $role: AccessRole!, $expires: Date) { grantAccess(name: $name, role: $role, expires: $expires) { userId name role expires key } }\",\"variables\":{\"name\":\"Ana Ruiz\",\"role\":\"WRITE\",\"expires\":null},\"operationName\":\"GrantAccess\"}"
       },
       "headers": [
         {
@@ -515,7 +515,7 @@
       "url": "{{ _.base_url }}{{ _.graphql_path }}",
       "body": {
         "mimeType": "application/graphql",
-        "text": "{\"query\":\"mutation($user: String!, $role: AccessRole!, $expires: Date) { grantAccess(userId: $user, role: $role, expires: $expires) { userId name role expires key } }\",\"variables\":{\"user\":\"PASTE-A-USER-ID\",\"role\":\"READ\",\"expires\":\"2026-12-31\"}}"
+        "text": "{\"query\":\"mutation GrantAccess($user: String!, $role: AccessRole!, $expires: Date) { grantAccess(userId: $user, role: $role, expires: $expires) { userId name role expires key } }\",\"variables\":{\"user\":\"PASTE-A-USER-ID\",\"role\":\"READ\",\"expires\":\"2026-12-31\"},\"operationName\":\"GrantAccess\"}"
       },
       "headers": [
         {
@@ -540,7 +540,7 @@
       "url": "{{ _.base_url }}{{ _.graphql_path }}",
       "body": {
         "mimeType": "application/graphql",
-        "text": "{\"query\":\"mutation($user: String!, $name: String!) { renameUser(userId: $user, name: $name) }\",\"variables\":{\"user\":\"PASTE-A-USER-ID\",\"name\":\"Ana Ruiz Pérez\"}}"
+        "text": "{\"query\":\"mutation RenameUser($user: String!, $name: String!) { renameUser(userId: $user, name: $name) }\",\"variables\":{\"user\":\"PASTE-A-USER-ID\",\"name\":\"Ana Ruiz Pérez\"},\"operationName\":\"RenameUser\"}"
       },
       "headers": [
         {
@@ -565,7 +565,7 @@
       "url": "{{ _.base_url }}{{ _.graphql_path }}",
       "body": {
         "mimeType": "application/graphql",
-        "text": "{\"query\":\"mutation($user: String!) { revokeAccess(userId: $user) }\",\"variables\":{\"user\":\"PASTE-A-USER-ID\"}}"
+        "text": "{\"query\":\"mutation RevokeAccess($user: String!) { revokeAccess(userId: $user) }\",\"variables\":{\"user\":\"PASTE-A-USER-ID\"},\"operationName\":\"RevokeAccess\"}"
       },
       "headers": [
         {
@@ -633,7 +633,7 @@
       "url": "{{ _.base_url }}/node/graphql",
       "body": {
         "mimeType": "application/graphql",
-        "text": "{\"query\":\"{ ledgers { name served reason nodeId listenPort } }\",\"variables\":{}}"
+        "text": "{\"query\":\"query Ledgers { ledgers { name served reason nodeId listenPort } }\",\"variables\":{},\"operationName\":\"Ledgers\"}"
       },
       "headers": [
         {
@@ -658,7 +658,7 @@
       "url": "{{ _.base_url }}/node/graphql",
       "body": {
         "mimeType": "application/graphql",
-        "text": "{\"query\":\"mutation($name: String!, $ports: String) { addLedger(name: $name, newMeshPorts: $ports) { name served reason nodeId listenPort } }\",\"variables\":{\"name\":\"acme\",\"ports\":\"4433-4532\"}}"
+        "text": "{\"query\":\"mutation AddLedger($name: String!, $ports: String) { addLedger(name: $name, newMeshPorts: $ports) { name served reason nodeId listenPort } }\",\"variables\":{\"name\":\"acme\",\"ports\":\"4433-4532\"},\"operationName\":\"AddLedger\"}"
       },
       "headers": [
         {
@@ -683,7 +683,7 @@
       "url": "{{ _.base_url }}/node/graphql",
       "body": {
         "mimeType": "application/graphql",
-        "text": "{\"query\":\"mutation($name: String!, $settings: String) { addLedger(name: $name, settings: $settings) { name served reason nodeId listenPort } }\",\"variables\":{\"name\":\"notes\",\"settings\":\"{}\"}}"
+        "text": "{\"query\":\"mutation AddLedger($name: String!, $settings: String) { addLedger(name: $name, settings: $settings) { name served reason nodeId listenPort } }\",\"variables\":{\"name\":\"notes\",\"settings\":\"{}\"},\"operationName\":\"AddLedger\"}"
       },
       "headers": [
         {
@@ -708,7 +708,7 @@
       "url": "{{ _.base_url }}/node/graphql",
       "body": {
         "mimeType": "application/graphql",
-        "text": "{\"query\":\"mutation($name: String!) { restartLedger(name: $name) { name served reason nodeId listenPort } }\",\"variables\":{\"name\":\"acme\"}}"
+        "text": "{\"query\":\"mutation RestartLedger($name: String!) { restartLedger(name: $name) { name served reason nodeId listenPort } }\",\"variables\":{\"name\":\"acme\"},\"operationName\":\"RestartLedger\"}"
       },
       "headers": [
         {
@@ -733,7 +733,7 @@
       "url": "{{ _.base_url }}/node/graphql",
       "body": {
         "mimeType": "application/graphql",
-        "text": "{\"query\":\"mutation($name: String!) { removeLedger(name: $name) { name movedTo } }\",\"variables\":{\"name\":\"acme\"}}"
+        "text": "{\"query\":\"mutation RemoveLedger($name: String!) { removeLedger(name: $name) { name movedTo } }\",\"variables\":{\"name\":\"acme\"},\"operationName\":\"RemoveLedger\"}"
       },
       "headers": [
         {
@@ -758,7 +758,7 @@
       "url": "{{ _.base_url }}/node/graphql",
       "body": {
         "mimeType": "application/graphql",
-        "text": "{\"query\":\"mutation($name: String!, $address: String!) { inviteLedger(name: $name, address: $address) }\",\"variables\":{\"name\":\"acme\",\"address\":\"ledger.example.com\"}}"
+        "text": "{\"query\":\"mutation InviteLedger($name: String!, $address: String!) { inviteLedger(name: $name, address: $address) }\",\"variables\":{\"name\":\"acme\",\"address\":\"ledger.example.com\"},\"operationName\":\"InviteLedger\"}"
       },
       "headers": [
         {
@@ -783,7 +783,7 @@
       "url": "{{ _.base_url }}/node/graphql",
       "body": {
         "mimeType": "application/graphql",
-        "text": "{\"query\":\"mutation($invitation: String!, $address: String!, $ports: String!) { joinLedger(invitation: $invitation, address: $address, newMeshPorts: $ports) { reply trusts ledger { name served nodeId listenPort } } }\",\"variables\":{\"invitation\":\"PASTE-THE-INVITATION\",\"address\":\"ledger2.example.com\",\"ports\":\"4433-4532\"}}"
+        "text": "{\"query\":\"mutation JoinLedger($invitation: String!, $address: String!, $ports: String!) { joinLedger(invitation: $invitation, address: $address, newMeshPorts: $ports) { reply trusts ledger { name served nodeId listenPort } } }\",\"variables\":{\"invitation\":\"PASTE-THE-INVITATION\",\"address\":\"ledger2.example.com\",\"ports\":\"4433-4532\"},\"operationName\":\"JoinLedger\"}"
       },
       "headers": [
         {
@@ -808,7 +808,7 @@
       "url": "{{ _.base_url }}/node/graphql",
       "body": {
         "mimeType": "application/graphql",
-        "text": "{\"query\":\"mutation($reply: String!) { acceptLedger(reply: $reply) { nodeId address ledger { name served nodeId listenPort } } }\",\"variables\":{\"reply\":\"PASTE-THE-REPLY\"}}"
+        "text": "{\"query\":\"mutation AcceptLedger($reply: String!) { acceptLedger(reply: $reply) { nodeId address ledger { name served nodeId listenPort } } }\",\"variables\":{\"reply\":\"PASTE-THE-REPLY\"},\"operationName\":\"AcceptLedger\"}"
       },
       "headers": [
         {
@@ -841,7 +841,7 @@
       "url": "{{ _.base_url }}{{ _.graphql_path }}",
       "body": {
         "mimeType": "application/graphql",
-        "text": "{\"query\":\"mutation($date: Date!) { bank: openAccount(name: \\\"Assets:Bank:Checking\\\", date: $date) office: openAccount(name: \\\"Expenses:Office\\\", date: $date) suspense: openAccount(name: \\\"Expenses:Uncategorized\\\", date: $date) }\",\"variables\":{\"date\":\"2020-01-01\"}}"
+        "text": "{\"query\":\"mutation OpenDemoAccounts($date: Date!) { bank: openAccount(name: \\\"Assets:Bank:Checking\\\", date: $date) office: openAccount(name: \\\"Expenses:Office\\\", date: $date) suspense: openAccount(name: \\\"Expenses:Uncategorized\\\", date: $date) }\",\"variables\":{\"date\":\"2020-01-01\"},\"operationName\":\"OpenDemoAccounts\"}"
       },
       "headers": [
         {
@@ -867,7 +867,7 @@
       "url": "{{ _.base_url }}{{ _.graphql_path }}",
       "body": {
         "mimeType": "application/graphql",
-        "text": "{\"query\":\"mutation { connectSandboxBank { itemId institutionName connectedOn lastSyncedAt lastErrorCode lastNotice lastNoticeAt accounts { accountId name mask type subtype ledgerAccount importFrom } } }\",\"variables\":{}}"
+        "text": "{\"query\":\"mutation ConnectSandboxBank { connectSandboxBank { itemId institutionName connectedOn lastSyncedAt lastErrorCode lastNotice lastNoticeAt accounts { accountId name mask type subtype ledgerAccount importFrom } } }\",\"variables\":{},\"operationName\":\"ConnectSandboxBank\"}"
       },
       "headers": [
         {
@@ -893,7 +893,7 @@
       "url": "{{ _.base_url }}{{ _.graphql_path }}",
       "body": {
         "mimeType": "application/graphql",
-        "text": "{\"query\":\"mutation { createPlaidLinkToken { linkToken expiration } }\",\"variables\":{}}"
+        "text": "{\"query\":\"mutation CreatePlaidLinkToken { createPlaidLinkToken { linkToken expiration } }\",\"variables\":{},\"operationName\":\"CreatePlaidLinkToken\"}"
       },
       "headers": [
         {
@@ -919,7 +919,7 @@
       "url": "{{ _.base_url }}{{ _.graphql_path }}",
       "body": {
         "mimeType": "application/graphql",
-        "text": "{\"query\":\"mutation($publicToken: String!) { connectBank(publicToken: $publicToken) { itemId institutionName connectedOn lastSyncedAt lastErrorCode lastNotice lastNoticeAt accounts { accountId name mask type subtype ledgerAccount importFrom } } }\",\"variables\":{\"publicToken\":\"public-sandbox-PASTE-FROM-LINK\"}}"
+        "text": "{\"query\":\"mutation ConnectBank($publicToken: String!) { connectBank(publicToken: $publicToken) { itemId institutionName connectedOn lastSyncedAt lastErrorCode lastNotice lastNoticeAt accounts { accountId name mask type subtype ledgerAccount importFrom } } }\",\"variables\":{\"publicToken\":\"public-sandbox-PASTE-FROM-LINK\"},\"operationName\":\"ConnectBank\"}"
       },
       "headers": [
         {
@@ -945,7 +945,7 @@
       "url": "{{ _.base_url }}{{ _.graphql_path }}",
       "body": {
         "mimeType": "application/graphql",
-        "text": "{\"query\":\"{ connectedBanks { itemId institutionName connectedOn lastSyncedAt lastErrorCode lastNotice lastNoticeAt accounts { accountId name mask type subtype ledgerAccount importFrom } } }\",\"variables\":{}}"
+        "text": "{\"query\":\"query ConnectedBanks { connectedBanks { itemId institutionName connectedOn lastSyncedAt lastErrorCode lastNotice lastNoticeAt accounts { accountId name mask type subtype ledgerAccount importFrom } } }\",\"variables\":{},\"operationName\":\"ConnectedBanks\"}"
       },
       "headers": [
         {
@@ -971,7 +971,7 @@
       "url": "{{ _.base_url }}{{ _.graphql_path }}",
       "body": {
         "mimeType": "application/graphql",
-        "text": "{\"query\":\"mutation($item: String!, $account: String!, $ledgerAccount: String!, $importFrom: Date) { mapBankAccount(itemId: $item, accountId: $account, ledgerAccount: $ledgerAccount, importFrom: $importFrom) { itemId institutionName connectedOn lastSyncedAt lastErrorCode lastNotice lastNoticeAt accounts { accountId name mask type subtype ledgerAccount importFrom } } }\",\"variables\":{\"item\":\"{{ _.item_id }}\",\"account\":\"{{ _.account_id }}\",\"ledgerAccount\":\"{{ _.ledger_account }}\",\"importFrom\":null}}"
+        "text": "{\"query\":\"mutation MapBankAccount($item: String!, $account: String!, $ledgerAccount: String!, $importFrom: Date) { mapBankAccount(itemId: $item, accountId: $account, ledgerAccount: $ledgerAccount, importFrom: $importFrom) { itemId institutionName connectedOn lastSyncedAt lastErrorCode lastNotice lastNoticeAt accounts { accountId name mask type subtype ledgerAccount importFrom } } }\",\"variables\":{\"item\":\"{{ _.item_id }}\",\"account\":\"{{ _.account_id }}\",\"ledgerAccount\":\"{{ _.ledger_account }}\",\"importFrom\":null},\"operationName\":\"MapBankAccount\"}"
       },
       "headers": [
         {
@@ -997,7 +997,7 @@
       "url": "{{ _.base_url }}{{ _.graphql_path }}",
       "body": {
         "mimeType": "application/graphql",
-        "text": "{\"query\":\"mutation($item: String!, $account: String!) { unmapBankAccount(itemId: $item, accountId: $account) { itemId institutionName connectedOn lastSyncedAt lastErrorCode lastNotice lastNoticeAt accounts { accountId name mask type subtype ledgerAccount importFrom } } }\",\"variables\":{\"item\":\"{{ _.item_id }}\",\"account\":\"{{ _.account_id }}\"}}"
+        "text": "{\"query\":\"mutation UnmapBankAccount($item: String!, $account: String!) { unmapBankAccount(itemId: $item, accountId: $account) { itemId institutionName connectedOn lastSyncedAt lastErrorCode lastNotice lastNoticeAt accounts { accountId name mask type subtype ledgerAccount importFrom } } }\",\"variables\":{\"item\":\"{{ _.item_id }}\",\"account\":\"{{ _.account_id }}\"},\"operationName\":\"UnmapBankAccount\"}"
       },
       "headers": [
         {
@@ -1023,7 +1023,7 @@
       "url": "{{ _.base_url }}{{ _.graphql_path }}",
       "body": {
         "mimeType": "application/graphql",
-        "text": "{\"query\":\"mutation($item: String!) { refreshBankAccounts(itemId: $item) { itemId institutionName connectedOn lastSyncedAt lastErrorCode lastNotice lastNoticeAt accounts { accountId name mask type subtype ledgerAccount importFrom } } }\",\"variables\":{\"item\":\"{{ _.item_id }}\"}}"
+        "text": "{\"query\":\"mutation RefreshBankAccounts($item: String!) { refreshBankAccounts(itemId: $item) { itemId institutionName connectedOn lastSyncedAt lastErrorCode lastNotice lastNoticeAt accounts { accountId name mask type subtype ledgerAccount importFrom } } }\",\"variables\":{\"item\":\"{{ _.item_id }}\"},\"operationName\":\"RefreshBankAccounts\"}"
       },
       "headers": [
         {
@@ -1049,7 +1049,7 @@
       "url": "{{ _.base_url }}{{ _.graphql_path }}",
       "body": {
         "mimeType": "application/graphql",
-        "text": "{\"query\":\"mutation($item: String!) { createPlaidLinkToken(itemId: $item) { linkToken expiration } }\",\"variables\":{\"item\":\"{{ _.item_id }}\"}}"
+        "text": "{\"query\":\"mutation CreatePlaidLinkTokenToLogInAgain($item: String!) { createPlaidLinkToken(itemId: $item) { linkToken expiration } }\",\"variables\":{\"item\":\"{{ _.item_id }}\"},\"operationName\":\"CreatePlaidLinkTokenToLogInAgain\"}"
       },
       "headers": [
         {
@@ -1075,7 +1075,7 @@
       "url": "{{ _.base_url }}{{ _.graphql_path }}",
       "body": {
         "mimeType": "application/graphql",
-        "text": "{\"query\":\"mutation($item: String!) { resetSandboxLogin(itemId: $item) }\",\"variables\":{\"item\":\"{{ _.item_id }}\"}}"
+        "text": "{\"query\":\"mutation ResetSandboxLogin($item: String!) { resetSandboxLogin(itemId: $item) }\",\"variables\":{\"item\":\"{{ _.item_id }}\"},\"operationName\":\"ResetSandboxLogin\"}"
       },
       "headers": [
         {
@@ -1101,7 +1101,7 @@
       "url": "{{ _.base_url }}{{ _.graphql_path }}",
       "body": {
         "mimeType": "application/graphql",
-        "text": "{\"query\":\"mutation($item: String!, $code: String!) { fireSandboxWebhook(itemId: $item, webhookCode: $code) }\",\"variables\":{\"item\":\"{{ _.item_id }}\",\"code\":\"SYNC_UPDATES_AVAILABLE\"}}"
+        "text": "{\"query\":\"mutation FireSandboxWebhook($item: String!, $code: String!) { fireSandboxWebhook(itemId: $item, webhookCode: $code) }\",\"variables\":{\"item\":\"{{ _.item_id }}\",\"code\":\"SYNC_UPDATES_AVAILABLE\"},\"operationName\":\"FireSandboxWebhook\"}"
       },
       "headers": [
         {
@@ -1127,7 +1127,7 @@
       "url": "{{ _.base_url }}{{ _.graphql_path }}",
       "body": {
         "mimeType": "application/graphql",
-        "text": "{\"query\":\"mutation { updateBankWebhooks }\",\"variables\":{}}"
+        "text": "{\"query\":\"mutation UpdateBankWebhooks { updateBankWebhooks }\",\"variables\":{},\"operationName\":\"UpdateBankWebhooks\"}"
       },
       "headers": [
         {
@@ -1153,7 +1153,7 @@
       "url": "{{ _.base_url }}{{ _.graphql_path }}",
       "body": {
         "mimeType": "application/graphql",
-        "text": "{\"query\":\"mutation($item: String!) { syncBank(itemId: $item) { imported alreadyImported inInbox skippedPending skippedUnmapped skippedBeforeStart needsReview { transactionId reason } stoppedBy } }\",\"variables\":{\"item\":\"{{ _.item_id }}\"}}"
+        "text": "{\"query\":\"mutation SyncBank($item: String!) { syncBank(itemId: $item) { imported alreadyImported inInbox skippedPending skippedUnmapped skippedBeforeStart needsReview { transactionId reason } stoppedBy } }\",\"variables\":{\"item\":\"{{ _.item_id }}\"},\"operationName\":\"SyncBank\"}"
       },
       "headers": [
         {
@@ -1179,7 +1179,7 @@
       "url": "{{ _.base_url }}{{ _.graphql_path }}",
       "body": {
         "mimeType": "application/graphql",
-        "text": "{\"query\":\"mutation($item: String!) { disconnectBank(itemId: $item) }\",\"variables\":{\"item\":\"{{ _.item_id }}\"}}"
+        "text": "{\"query\":\"mutation DisconnectBank($item: String!) { disconnectBank(itemId: $item) }\",\"variables\":{\"item\":\"{{ _.item_id }}\"},\"operationName\":\"DisconnectBank\"}"
       },
       "headers": [
         {
@@ -1212,7 +1212,7 @@
       "url": "{{ _.base_url }}{{ _.graphql_path }}",
       "body": {
         "mimeType": "application/graphql",
-        "text": "{\"query\":\"mutation($item: String!) { fetchBankTransactions(itemId: $item) { added updated dropped alreadyBooked alreadyInInbox skippedPending skippedUnmapped skippedBeforeStart needsReview { transactionId reason } stoppedBy } }\",\"variables\":{\"item\":\"{{ _.item_id }}\"}}"
+        "text": "{\"query\":\"mutation FetchBankTransactions($item: String!) { fetchBankTransactions(itemId: $item) { added updated dropped alreadyBooked alreadyInInbox skippedPending skippedUnmapped skippedBeforeStart needsReview { transactionId reason } stoppedBy } }\",\"variables\":{\"item\":\"{{ _.item_id }}\"},\"operationName\":\"FetchBankTransactions\"}"
       },
       "headers": [
         {
@@ -1238,7 +1238,7 @@
       "url": "{{ _.base_url }}{{ _.graphql_path }}",
       "body": {
         "mimeType": "application/graphql",
-        "text": "{\"query\":\"query($item: String, $first: Int!, $offset: Int!) { bankInbox(itemId: $item, first: $first, offset: $offset) { total transactions { transactionId itemId institutionName accountId accountName accountMask ledgerAccount date amount { number currency } payee description category fetchedAt } } }\",\"variables\":{\"item\":null,\"first\":50,\"offset\":0}}"
+        "text": "{\"query\":\"query BankInbox($item: String, $first: Int!, $offset: Int!) { bankInbox(itemId: $item, first: $first, offset: $offset) { total transactions { transactionId itemId institutionName accountId accountName accountMask ledgerAccount date amount { number currency } payee description category fetchedAt } } }\",\"variables\":{\"item\":null,\"first\":50,\"offset\":0},\"operationName\":\"BankInbox\"}"
       },
       "headers": [
         {
@@ -1264,7 +1264,7 @@
       "url": "{{ _.base_url }}{{ _.graphql_path }}",
       "body": {
         "mimeType": "application/graphql",
-        "text": "{\"query\":\"{ bankInbox(first: 50) { total transactions { transactionId date amount { number currency } payee description category accountName ledgerAccount } } connectedBanks { itemId institutionName lastSyncedAt lastErrorCode lastNotice } accounts { name closedOn } }\",\"variables\":{}}"
+        "text": "{\"query\":\"query ReviewScreen { bankInbox(first: 50) { total transactions { transactionId date amount { number currency } payee description category accountName ledgerAccount } } connectedBanks { itemId institutionName lastSyncedAt lastErrorCode lastNotice } accounts { name closedOn } }\",\"variables\":{},\"operationName\":\"ReviewScreen\"}"
       },
       "headers": [
         {
@@ -1290,7 +1290,7 @@
       "url": "{{ _.base_url }}{{ _.graphql_path }}",
       "body": {
         "mimeType": "application/graphql",
-        "text": "{\"query\":\"mutation($items: [ClassifyInput!]!) { classifyBankTransactions(items: $items) { transactionId ok txid code message } }\",\"variables\":{\"items\":[{\"transactionId\":\"{{ _.transaction_id }}\",\"account\":\"Expenses:Office\",\"payee\":null,\"narration\":\"Printer paper\"}]}}"
+        "text": "{\"query\":\"mutation ClassifyBankTransactions($items: [ClassifyInput!]!) { classifyBankTransactions(items: $items) { transactionId ok txid code message } }\",\"variables\":{\"items\":[{\"transactionId\":\"{{ _.transaction_id }}\",\"account\":\"Expenses:Office\",\"payee\":null,\"narration\":\"Printer paper\"}]},\"operationName\":\"ClassifyBankTransactions\"}"
       },
       "headers": [
         {
@@ -1316,7 +1316,7 @@
       "url": "{{ _.base_url }}{{ _.graphql_path }}",
       "body": {
         "mimeType": "application/graphql",
-        "text": "{\"query\":\"mutation($items: [IgnoreInput!]!) { ignoreBankTransactions(items: $items) { transactionId ok code message } }\",\"variables\":{\"items\":[{\"transactionId\":\"{{ _.transaction_id }}\",\"reason\":\"a transfer entered by hand\"}]}}"
+        "text": "{\"query\":\"mutation IgnoreBankTransactions($items: [IgnoreInput!]!) { ignoreBankTransactions(items: $items) { transactionId ok code message } }\",\"variables\":{\"items\":[{\"transactionId\":\"{{ _.transaction_id }}\",\"reason\":\"a transfer entered by hand\"}]},\"operationName\":\"IgnoreBankTransactions\"}"
       },
       "headers": [
         {

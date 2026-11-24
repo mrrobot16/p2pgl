@@ -757,7 +757,10 @@ INFO http::stranger: ledger=default method=GET path=/health operation=- user=- s
 - `ledger` is the company (`default` for `/graphql` and `/health`, `-` for
   none); `/ledgers/acm%65/graphql`, which serves `acme`, says `acme`.
 - `operation` is the `operationName` the client sent: `-` when it sent none,
-  `?` when it is not a GraphQL name of at most 64 characters.
+  `?` when it is not a GraphQL name of at most 64 characters. Naming the
+  operation in the query (`mutation SyncBank(…)`) is not enough: send the
+  name as `operationName` too, as every request in
+  `docs/api/openledger.insomnia.json` does.
 - `user` is the person's user id, `operator`, or `-` when no key let the
   request through to a handler. On a loopback node with `auth.enabled:
   false` every caller is the operator.
@@ -1411,6 +1414,17 @@ refused whole (`INVALID_INPUT`). A call holds the inbox while it runs, so
 bookkeepers' calls, fetches and syncs take turns; a call cut short (the
 request timeout) may have booked some of its list, which the next call finds
 in the books.
+
+Each call that runs to its end writes one line to the node's log, with
+counts only: `bank transactions booked from the inbox booked=…
+not_booked=…`, or `bank transactions ignored ignored=… not_ignored=…` —
+never an amount, a payee or a reason; the request line beside it says who.
+`not_booked` counts every one not written by this call, `ALREADY_BOOKED`
+included, though that one leaves the inbox; a call cut short writes no
+line, the request line only. Mapping and
+unmapping a bank account write `bank account mapped item_id=… account_id=…
+ledger_account=… import_from=…` and `bank account unmapped item_id=…
+account_id=…`.
 
 All the Plaid mutations — `createPlaidLinkToken`, `connectBank`,
 `disconnectBank`, `mapBankAccount`, `unmapBankAccount`, `refreshBankAccounts`,

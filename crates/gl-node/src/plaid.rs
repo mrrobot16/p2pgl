@@ -1440,6 +1440,15 @@ impl PlaidService {
             store.remove(&cursor_name(item_id))?;
             store.remove(&complete_cursor_name(item_id))?;
         }
+        // Once stored, the bank and its account are ones this ledger holds;
+        // the ledger account is escaped all the same (M-41).
+        info!(
+            item_id = %item_id,
+            account_id = %account_id,
+            ledger_account = %crate::request_log::escaped(ledger_account, 128),
+            import_from = %import_from,
+            "bank account mapped"
+        );
         Ok(connection)
     }
 
@@ -1802,6 +1811,7 @@ impl PlaidService {
         let text = serde_json::to_string(&connection)
             .map_err(|error| PlaidError::Unexpected(error.to_string()))?;
         store.put(&info_name(item_id), &Secret::new(text))?;
+        info!(item_id = %item_id, account_id = %account_id, "bank account unmapped");
         Ok(connection)
     }
 
