@@ -396,6 +396,29 @@ Roll back every node of the mesh, as you upgraded every node.
 Every release rehearses this upgrade and rollback from the previous release's
 binary, on one machine (`docs/RELEASE.md`).
 
+### To 0.5.0, the release with node logs (from 0.4.0)
+
+- **An installed server:** `openledger upgrade --version 0.5.0`. It runs
+  0.5.0's installer, which adds `openledger logs` and `openledger
+  request-log` and builds an image that sets no `RUST_LOG` (L-159), so the
+  node's own filter keeps a stranger's failed handshakes out of the log.
+  `--binary` alone runs the 0.4.0 installer, whose image still sets
+  `RUST_LOG=info`: add `--installer` with 0.5.0's `install.sh`.
+- **The log grows:** every HTTP request writes a line, strangers' and
+  `/health` included. `openledger request-log key-holders` keeps only the
+  requests a key let through; `off` none (README *Request log*).
+- **The log's bytes change:** no colour codes when the output is not a
+  terminal (`docker logs`, a file, a log shipper). Anything that parsed the
+  escape codes must stop expecting them.
+- **Nothing else changes:** no config key, and records are written as
+  before, so a mesh can be upgraded one node at a time.
+- **Rolling back:** nothing to undo first. A `RUST_LOG` line that
+  `openledger request-log` wrote to `/opt/openledger/env` stays, and 0.4.0
+  reads it as an ordinary filter; 0.4.0's installer puts back its own
+  `openledger` command, without `logs` and `request-log`, so remove that line
+  by hand if you want it gone. With no such line, 0.4.0's image sets
+  `RUST_LOG=info` again, and L-159 is back until the next upgrade.
+
 ### To 0.4.0, the release with bank feeds (from 0.3.0)
 
 - **An installed server:** `openledger upgrade --version 0.4.0`. It runs

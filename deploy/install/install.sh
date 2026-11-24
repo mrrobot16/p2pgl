@@ -47,7 +47,7 @@ umask 077
 
 # The release this script installs by default; scripts/release.sh checks it
 # is the version being released.
-RELEASE_VERSION="0.4.0"
+RELEASE_VERSION="0.5.0"
 REPO_URL="https://github.com/accounting-app/p2pgl"
 # The project image's runtime base (Dockerfile, `AS runtime`) — release.sh
 # checks they are the same — and Caddy, both pinned by digest (L-10).

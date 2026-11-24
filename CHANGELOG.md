@@ -7,6 +7,39 @@ break compatibility.
 
 ## [Unreleased]
 
+## [0.5.0] — 2026-11-24
+
+Node logs you can read. Every HTTP request writes one line — the company,
+who asked, whether it was a query or a mutation and which fields it ran,
+the status and the time, never the request's data — and the bank feed's
+steps write their own (connected, fetched, booked, ignored, mapped). On a
+server set up by the installer, `openledger logs` reads them like `heroku
+logs --tail`, and `openledger request-log` chooses which requests are
+logged. Two fixes to what reaches the log: a ledger name in a URL can no
+longer forge a line (L-158), and the Docker images no longer undo the
+filter that keeps a stranger's failed handshakes quiet (L-159).
+
+**Status: pilot,** as 0.4.0. The bank feed has now run against Plaid's own
+sandbox — a sandbox bank connected without Link, mapped, fetched into the
+inbox and booked, a login needed again, disconnected — with no fault found.
+Not yet run there: webhooks, Link and banks that log in on their own site,
+and `syncBank` importing a bank's history (it ran, with nothing left to
+import). The installer has not yet run on servers at a provider with real
+domains. Run it beside your existing books before relying on it.
+
+**Upgrading from 0.4.0:** `docs/OPERATIONS.md`, *Upgrading* and *To 0.5.0*.
+With the installer, upgrade with `--version 0.5.0` (L-159's fix is in the
+installer's image).
+
+**Known limits.**
+
+- The 0.4.0 limits stand (below).
+- **Nothing bounds how many request lines** a caller with no key writes
+  (010, the maintainer's decision): `openledger request-log key-holders`, or
+  a rate limit at the proxy, if strangers' requests crowd out the rest.
+- The request line names what ran, not its data: no query text, no
+  argument, no value, by design.
+
 ### Added
 
 - **A request log** (009 unit 1, 010): the node writes one line for every

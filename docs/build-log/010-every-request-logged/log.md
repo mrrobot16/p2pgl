@@ -188,4 +188,4 @@ to commit. The commit hash is filled in once the maintainer has committed.
   before the depth limit (not run; needs a key).
 - **Also:** `007`'s last entry gets its commit, `62fd6be`.
 - **Departures from the plan:** none (a follow-up).
-- **Commit:** —
+- **Commit:** 2d60f60
