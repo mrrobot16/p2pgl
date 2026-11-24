@@ -22,8 +22,8 @@
   },
   "NL-R2-graphql-handler-sets-no-note": {
     "file": "crates/gl-node/src/graphql/mod.rs",
-    "old": "            RequestNote::new(Some(caller), operation_name.as_deref(), errors).attach(response)",
-    "new": "            let _ = (caller, &operation_name, errors);\n            response",
+    "old": "        Some(caller) => RequestNote::new(Some(caller), operation_name.as_deref(), errors)\n            .with_fields(&fields)\n            .attach(response),",
+    "new": "        Some(caller) => {\n            let _ = (caller, &operation_name, errors, &fields);\n            response\n        }",
     "runs": [
       [
         "-p",
@@ -318,6 +318,167 @@
         "--test",
         "shipped_binary",
         "a_folder_named_with_a_newline_cannot_start_a_line"
+      ]
+    ]
+  },
+  "NL-R23-ledgers-schema-logs-no-fields": {
+    "file": "crates/gl-node/src/graphql/mod.rs",
+    "old": "        .extension(crate::access_control::AccessControl)\n        // After AccessControl: it reads what a request runs before the role\n        // is judged, so a refused request's line says what it asked (010).\n        .extension(crate::request_log::LogFields);",
+    "new": "        .extension(crate::access_control::AccessControl);",
+    "runs": [
+      [
+        "-p",
+        "gl-node",
+        "--bin",
+        "gl-node",
+        "fields_say_what_ran_whatever_the_client_named_it"
+      ],
+      [
+        "-p",
+        "gl-node",
+        "--test",
+        "shipped_binary",
+        "the_shipped_binary_logs_each_request_in_plain_text"
+      ]
+    ]
+  },
+  "NL-R24-node-schema-logs-no-fields": {
+    "file": "crates/gl-node/src/ledger_admin.rs",
+    "old": "        .extension(crate::request_log::LogFields)\n        .data(admin);",
+    "new": "        .data(admin);",
+    "runs": [
+      [
+        "-p",
+        "gl-node",
+        "--bin",
+        "gl-node",
+        "the_node_endpoints_line_says_what_ran"
+      ]
+    ]
+  },
+  "NL-R25-fields-logged-by-alias": {
+    "file": "crates/gl-node/src/request_log.rs",
+    "old": "                let name = field.node.name.node.as_str();",
+    "new": "                let name = field.node.alias.as_ref().unwrap_or(&field.node.name).node.as_str();",
+    "runs": [
+      [
+        "-p",
+        "gl-node",
+        "--bin",
+        "gl-node",
+        "fields_say_what_ran_whatever_the_client_named_it"
+      ]
+    ]
+  },
+  "NL-R26-fields-uncapped": {
+    "file": "crates/gl-node/src/request_log.rs",
+    "old": "                    if fields.names.len() < MAX_FIELDS {",
+    "new": "                    if true || fields.names.len() < MAX_FIELDS {",
+    "runs": [
+      [
+        "-p",
+        "gl-node",
+        "--bin",
+        "gl-node",
+        "fields_say_what_ran_whatever_the_client_named_it"
+      ]
+    ]
+  },
+  "NL-R27-fields-take-unlimited-room": {
+    "file": "crates/gl-node/src/request_log.rs",
+    "old": "    let room = MAX_LINE_BYTES\n        .saturating_sub(PREFIX_BYTES + before.len() + \" fields= \".len() + after.len());",
+    "new": "    let room = usize::MAX;",
+    "runs": [
+      [
+        "-p",
+        "gl-node",
+        "--bin",
+        "gl-node",
+        "every_line_is_under_512_bytes"
+      ]
+    ]
+  },
+  "NL-R28-fields-read-after-the-role-check": {
+    "file": "crates/gl-node/src/graphql/mod.rs",
+    "old": "        .extension(crate::access_control::AccessControl)\n        // After AccessControl: it reads what a request runs before the role\n        // is judged, so a refused request's line says what it asked (010).\n        .extension(crate::request_log::LogFields);",
+    "new": "        .extension(crate::request_log::LogFields)\n        .extension(crate::access_control::AccessControl);",
+    "runs": [
+      [
+        "-p",
+        "gl-node",
+        "--bin",
+        "gl-node",
+        "a_refused_request_still_says_what_it_asked"
+      ]
+    ]
+  },
+  "NL-R29-operation-name-ignored": {
+    "file": "crates/gl-node/src/request_log.rs",
+    "old": "        (DocumentOperations::Multiple(operations), Some(name)) => operations.get(name),",
+    "new": "        (DocumentOperations::Multiple(_), Some(_)) => None,",
+    "runs": [
+      [
+        "-p",
+        "gl-node",
+        "--bin",
+        "gl-node",
+        "fields_say_what_ran_whatever_the_client_named_it"
+      ]
+    ]
+  },
+  "NL-R30-fragments-not-followed": {
+    "file": "crates/gl-node/src/request_log.rs",
+    "old": "                if spread.insert(name) {",
+    "new": "                if false && spread.insert(name) {",
+    "runs": [
+      [
+        "-p",
+        "gl-node",
+        "--bin",
+        "gl-node",
+        "fields_say_what_ran_whatever_the_client_named_it"
+      ]
+    ]
+  },
+  "NL-R31-a-lone-named-operation-hidden": {
+    "file": "crates/gl-node/src/request_log.rs",
+    "old": "        (DocumentOperations::Multiple(operations), None) if operations.len() == 1 => {\n            operations.values().next()\n        }\n",
+    "new": "",
+    "runs": [
+      [
+        "-p",
+        "gl-node",
+        "--bin",
+        "gl-node",
+        "fields_say_what_ran_whatever_the_client_named_it"
+      ]
+    ]
+  },
+  "NL-R32-a-mutation-logged-as-a-query": {
+    "file": "crates/gl-node/src/request_log.rs",
+    "old": "            OperationType::Mutation => \"mutation\",",
+    "new": "            OperationType::Mutation => \"query\",",
+    "runs": [
+      [
+        "-p",
+        "gl-node",
+        "--bin",
+        "gl-node",
+        "a_refused_request_still_says_what_it_asked"
+      ]
+    ]
+  },
+  "NL-R33-no-kind-on-the-line": {
+    "file": "crates/gl-node/src/request_log.rs",
+    "old": "        fields.and_then(|fields| fields.kind).unwrap_or(\"-\"),",
+    "new": "        \"-\",",
+    "runs": [
+      [
+        "-p",
+        "gl-node",
+        "--bin",
+        "gl-node",
+        "fields_say_what_ran_whatever_the_client_named_it"
       ]
     ]
   }

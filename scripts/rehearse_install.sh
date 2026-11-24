@@ -149,7 +149,7 @@ for template in "${templates[@]}"; do
   from_vm /graphql "$key" "$verify"
   logs=$(in_vm sudo openledger logs --http -n 200)
   check "openledger logs --http: Ana's request, her user id and the caller's address ($vm_ip)" \
-    grep -Eq " INFO http: ledger=acme method=POST path=/ledgers/acme/graphql operation=Books user=u_[0-9a-f]{16} status=200 errors=0 ms=[0-9]+ client=$vm_ip\$" \
+    grep -Eq " INFO http: ledger=acme method=POST path=/ledgers/acme/graphql operation=Books kind=query fields=verify user=u_[0-9a-f]{16} status=200 errors=0 ms=[0-9]+ client=$vm_ip\$" \
     <(printf '%s\n' "$logs")
   others_logged() {  # what openledger logs acme must leave out is there to leave out
     grep -q ' ledger=acme-eu ' <<< "$logs" && grep -q ' ledger=default ' <<< "$logs"
@@ -166,7 +166,7 @@ for template in "${templates[@]}"; do
       "https://$2/graphql"
     wait || true' _ "$root" "$domain" "$vm_ip" "$key")
   check "openledger logs --tail streams a request made after it started" \
-    grep -q ' operation=Tailed user=operator status=200 ' <(printf '%s\n' "$tailed")
+    grep -q ' operation=Tailed kind=query fields=verify user=operator status=200 ' <(printf '%s\n' "$tailed")
   # 010: a stranger's request (no key) has its own line, target
   # http::stranger, and --no-strangers leaves it out.
   answer /ledgers/acme/graphql '' "$verify" >/dev/null
@@ -174,8 +174,8 @@ for template in "${templates[@]}"; do
     local all keyed
     all=$(in_vm sudo openledger logs --http -n 50) || return 1
     keyed=$(in_vm sudo openledger logs --http --no-strangers -n 50) || return 1
-    grep -q ' WARN http::stranger: ledger=acme method=POST path=/ledgers/acme/graphql operation=- user=- status=401 ' <<< "$all" \
-      && grep -q ' operation=Tailed user=operator ' <<< "$keyed" \
+    grep -q ' WARN http::stranger: ledger=acme method=POST path=/ledgers/acme/graphql operation=- kind=- fields=- user=- status=401 ' <<< "$all" \
+      && grep -q ' operation=Tailed kind=query fields=verify user=operator ' <<< "$keyed" \
       && ! grep -q ' http::stranger: ' <<< "$keyed"
   }
   check "a stranger's request is logged (http::stranger); --no-strangers leaves it out and keeps the key holders'" strangers
@@ -215,7 +215,7 @@ for template in "${templates[@]}"; do
     lines=$(in_vm sudo openledger logs --http -n 500) || return 1
     # No stranger line at all: the stranger's 401 above and every health
     # probe since the restart are strangers'.
-    grep -q ' operation=AfterSwitch user=operator ' <<< "$lines" && ! grep -q ' http::stranger: ' <<< "$lines"
+    grep -q ' operation=AfterSwitch kind=query fields=verify user=operator ' <<< "$lines" && ! grep -q ' http::stranger: ' <<< "$lines"
   }
   check "request-log key-holders: a key holder's request logged, no stranger's" key_holders_only
   in_vm sudo openledger request-log off >/dev/null || fail "openledger request-log off failed"

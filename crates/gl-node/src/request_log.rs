@@ -2,7 +2,7 @@
 //! 010).
 //!
 //! ```text
-//! INFO http: ledger=acme method=POST path=/ledgers/acme/graphql operation=AddTransaction user=u_7f3a… status=200 errors=0 ms=12 client=203.0.113.9
+//! INFO http: ledger=acme method=POST path=/ledgers/acme/graphql operation=AddTransaction kind=mutation fields=appendTransaction user=u_7f3a… status=200 errors=0 ms=12 client=203.0.113.9
 //! ```
 //!
 //! [`request_log`] is the outermost layer of the node's router, outside CORS
@@ -11,8 +11,13 @@
 //! 413s, 404s, `/health` and requests cut short included (010). A request a
 //! key let through carries a [`RequestNote`] — only code behind a key attaches
 //! one: the GraphQL handlers, after `auth_middleware` or `operator_only`, and
-//! `take_a_slot`'s 503 — which fills in its `user` and `operation`; every other
-//! line says `-` for both.
+//! `take_a_slot`'s 503 — which fills in its `user`, `operation`, `kind` and
+//! `fields`; every other line says `-` for them.
+//!
+//! `operation` is the name the client gave its request, if any; `kind` and
+//! `fields` are what ran: whether a query or a mutation, and the root fields
+//! of the operation the schema runs ([`LogFields`], 010's follow-up), so a
+//! client can neither hide nor rename it.
 //! A line with a note has the target `http`; a stranger's, `http::stranger`, so
 //! `RUST_LOG=…,http::stranger=off` leaves strangers out (010).
 //!
@@ -26,10 +31,17 @@
 //! a header, the body, the query text, its variables or the URL's query
 //! string.
 
+use std::collections::HashSet;
 use std::fmt::Write as _;
 use std::net::IpAddr;
+use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
+use async_graphql::extensions::{Extension, ExtensionContext, ExtensionFactory, NextParseQuery};
+use async_graphql::parser::types::{
+    DocumentOperations, ExecutableDocument, OperationType, Selection, SelectionSet,
+};
+use async_graphql::{ServerResult, Variables};
 use axum::body::Body;
 use axum::extract::State;
 use axum::http::{Method, Request, StatusCode};
@@ -47,14 +59,28 @@ const MAX_PATH_BYTES: usize = 128;
 /// Longest GraphQL operation name the line shows; a longer one is `?`.
 const MAX_OPERATION_CHARS: usize = 64;
 
+/// Most root fields a line names (010's follow-up); the rest are counted,
+/// `+N`. Fewer when the line has no room for them.
+const MAX_FIELDS: usize = 8;
+
+/// A line, with the prefix tracing writes before its text, stays under this
+/// (M-41's bar): the fields take what the rest leaves.
+const MAX_LINE_BYTES: usize = 511;
+
+/// The most tracing writes before a line's text: a timestamp, the level and
+/// the target, `2026-11-23T23:03:14.735528Z  WARN http::stranger: ` (51
+/// bytes), with room to spare.
+const PREFIX_BYTES: usize = 64;
+
 /// What a handler behind a key tells the request line (009): who asked, the
-/// operation's name and the count of errors. Carried in the response's
-/// extensions, so an answer nobody behind a key made carries none, and its
-/// line says `user=- operation=-`.
+/// operation's name, what ran and the count of errors. Carried in the
+/// response's extensions, so an answer nobody behind a key made carries none,
+/// and its line says `operation=- kind=- fields=- user=-`.
 #[derive(Clone, Debug)]
 pub(crate) struct RequestNote {
     user: String,
     operation: String,
+    fields: Option<FieldList>,
     errors: usize,
 }
 
@@ -69,14 +95,171 @@ impl RequestNote {
         RequestNote {
             user: user_field(caller).to_owned(),
             operation: operation_field(operation_name).to_owned(),
+            fields: None,
             errors,
         }
+    }
+
+    /// With what ran: the root fields [`LogFields`] left in `fields` when the
+    /// schema parsed the request (none, `-`, when it never parsed one).
+    pub(crate) fn with_fields(mut self, fields: &RootFields) -> Self {
+        self.fields = fields.found();
+        self
     }
 
     /// Attach this note to `response`.
     pub(crate) fn attach(self, mut response: Response) -> Response {
         response.extensions_mut().insert(self);
         response
+    }
+}
+
+/// What a request ran (010's follow-up): its operation's kind (`query`,
+/// `mutation`, `subscription`) and its root fields — each distinct name
+/// once, in the order the query has them, the field and never its alias or
+/// arguments, a name the line could not show as `?` — and how many more than
+/// [`MAX_FIELDS`] there were.
+#[derive(Clone, Debug, Default, PartialEq)]
+struct FieldList {
+    kind: Option<&'static str>,
+    names: Vec<String>,
+    more: usize,
+}
+
+/// Where the schema's [`LogFields`] extension leaves the root fields of the
+/// request it parses, for its request line: given to the request as its data
+/// by the GraphQL handlers, with the operation name the client sent, which
+/// picks the operation out of a query that has several.
+#[derive(Clone, Default)]
+pub(crate) struct RootFields {
+    operation_name: Option<String>,
+    found: Arc<Mutex<Option<FieldList>>>,
+}
+
+impl RootFields {
+    pub(crate) fn new(operation_name: Option<&str>) -> Self {
+        RootFields {
+            operation_name: operation_name.map(str::to_owned),
+            found: Arc::default(),
+        }
+    }
+
+    fn found(&self) -> Option<FieldList> {
+        self.found.lock().expect("root fields lock").clone()
+    }
+}
+
+/// The schema extension that reads what a request will run, for its request
+/// line: registered after `AccessControl`, so it sees the parsed query before
+/// a role is judged, and a refused request's line still says what it asked.
+pub(crate) struct LogFields;
+
+impl ExtensionFactory for LogFields {
+    fn create(&self) -> Arc<dyn Extension> {
+        Arc::new(LogFieldsExtension)
+    }
+}
+
+struct LogFieldsExtension;
+
+#[async_graphql::async_trait::async_trait]
+impl Extension for LogFieldsExtension {
+    async fn parse_query(
+        &self,
+        ctx: &ExtensionContext<'_>,
+        query: &str,
+        variables: &Variables,
+        next: NextParseQuery<'_>,
+    ) -> ServerResult<ExecutableDocument> {
+        let document = next.run(ctx, query, variables).await?;
+        if let Some(slot) = ctx.data_opt::<RootFields>() {
+            let fields = root_fields(&document, slot.operation_name.as_deref());
+            *slot.found.lock().expect("root fields lock") = Some(fields);
+        }
+        Ok(document)
+    }
+}
+
+/// The kind and root fields of the operation the schema runs from `document`
+/// with `operation_name` (none, `-`, when it runs none), following
+/// fragments at the root, each at most once (a fragment that spreads itself
+/// is invalid, but this runs before validation).
+fn root_fields(document: &ExecutableDocument, operation_name: Option<&str>) -> FieldList {
+    // As `Schema::execute` picks it (async-graphql 7.2): a named operation is
+    // filed under `Multiple` even alone, and runs without `operationName`
+    // when it is the only one — so a client cannot hide what it runs by
+    // naming its operation and not the request. None where nothing runs.
+    let operation = match (&document.operations, operation_name) {
+        (DocumentOperations::Single(operation), None) => Some(operation),
+        (DocumentOperations::Single(_), Some(_)) => None,
+        (DocumentOperations::Multiple(operations), Some(name)) => operations.get(name),
+        (DocumentOperations::Multiple(operations), None) if operations.len() == 1 => {
+            operations.values().next()
+        }
+        (DocumentOperations::Multiple(_), None) => None,
+    };
+    let mut fields = FieldList::default();
+    if let Some(operation) = operation {
+        fields.kind = Some(match operation.node.ty {
+            OperationType::Query => "query",
+            OperationType::Mutation => "mutation",
+            OperationType::Subscription => "subscription",
+        });
+        let mut seen = HashSet::new();
+        let mut spread = HashSet::new();
+        collect_fields(
+            document,
+            &operation.node.selection_set.node,
+            &mut spread,
+            &mut seen,
+            &mut fields,
+        );
+    }
+    fields
+}
+
+fn collect_fields<'a>(
+    document: &'a ExecutableDocument,
+    set: &'a SelectionSet,
+    spread: &mut HashSet<&'a str>,
+    seen: &mut HashSet<&'a str>,
+    fields: &mut FieldList,
+) {
+    for item in &set.items {
+        match &item.node {
+            Selection::Field(field) => {
+                let name = field.node.name.node.as_str();
+                let shown = if is_graphql_name(name) { name } else { "?" };
+                if seen.insert(shown) {
+                    if fields.names.len() < MAX_FIELDS {
+                        fields.names.push(shown.to_owned());
+                    } else {
+                        fields.more += 1;
+                    }
+                }
+            }
+            Selection::FragmentSpread(fragment) => {
+                let name = fragment.node.fragment_name.node.as_str();
+                if spread.insert(name) {
+                    if let Some(definition) = document.fragments.get(name) {
+                        collect_fields(
+                            document,
+                            &definition.node.selection_set.node,
+                            spread,
+                            seen,
+                            fields,
+                        );
+                    }
+                }
+            }
+            Selection::InlineFragment(fragment) => collect_fields(
+                document,
+                &fragment.node.selection_set.node,
+                spread,
+                seen,
+                fields,
+            ),
+        }
     }
 }
 
@@ -195,27 +378,75 @@ fn write_line(head: &Head, status: Option<StatusCode>, note: Option<&RequestNote
     }
 }
 
-/// The line's text: `ledger method path operation user status errors ms
-/// client`, then `cut_short=true` for a request that never finished.
+/// The line's text: `ledger method path operation kind fields user status
+/// errors ms client`, then `cut_short=true` for a request that never finished. The
+/// fields take the room the rest leaves under [`MAX_LINE_BYTES`].
 fn line(head: &Head, status: Option<StatusCode>, note: Option<&RequestNote>) -> String {
-    let (operation, user, errors) = match note {
-        Some(note) => (note.operation.as_str(), note.user.as_str(), note.errors),
-        None => ("-", "-", 0),
+    let (operation, fields, user, errors) = match note {
+        Some(note) => (
+            note.operation.as_str(),
+            note.fields.as_ref(),
+            note.user.as_str(),
+            note.errors,
+        ),
+        None => ("-", None, "-", 0),
     };
     let status = status.map_or_else(|| "-".to_owned(), |status| status.as_u16().to_string());
-    let mut line = format!(
-        "ledger={} method={} path={} operation={operation} user={user} status={status} \
-         errors={errors} ms={} client={}",
+    let before = format!(
+        "ledger={} method={} path={} operation={operation} kind={}",
         head.ledger,
         head.method,
         head.path,
+        fields.and_then(|fields| fields.kind).unwrap_or("-"),
+    );
+    let mut after = format!(
+        "user={user} status={status} errors={errors} ms={} client={}",
         head.started.elapsed().as_millis(),
         head.client,
     );
     if status == "-" {
-        line.push_str(" cut_short=true");
+        after.push_str(" cut_short=true");
     }
-    line
+    let room = MAX_LINE_BYTES
+        .saturating_sub(PREFIX_BYTES + before.len() + " fields= ".len() + after.len());
+    format!("{before} fields={} {after}", fields_field(fields, room))
+}
+
+/// The root fields as the line shows them, in at most `room` bytes: as many
+/// names as fit, then `+N` for the rest; `-` when no query was parsed, or its
+/// operation had none the line could pick.
+fn fields_field(fields: Option<&FieldList>, room: usize) -> String {
+    let Some(fields) = fields.filter(|fields| !fields.names.is_empty()) else {
+        return "-".to_owned();
+    };
+    let total = fields.names.len() + fields.more;
+    let mut shown = String::new();
+    let mut count = 0;
+    for name in &fields.names {
+        let left = total - count - 1;
+        let tail = if left > 0 {
+            format!(",+{left}").len()
+        } else {
+            0
+        };
+        let comma = usize::from(!shown.is_empty());
+        if shown.len() + comma + name.len() + tail > room {
+            break;
+        }
+        if comma == 1 {
+            shown.push(',');
+        }
+        shown.push_str(name);
+        count += 1;
+    }
+    let left = total - count;
+    if left > 0 {
+        if !shown.is_empty() {
+            shown.push(',');
+        }
+        let _ = write!(shown, "+{left}");
+    }
+    shown
 }
 
 /// The ledger a path names (009): `default` for the config file's ledger's
@@ -424,7 +655,7 @@ mod tests {
     ///
     /// Bug-catch: remove the layer from the node's router (NL-R1) and there is
     /// no line; stop `graphql_handler` attaching its note (NL-R2) and the line
-    /// says `user=- operation=-`.
+    /// says `operation=- kind=- fields=- user=-`.
     #[tokio::test]
     async fn a_keyed_request_logs_one_line_with_ledger_user_operation_and_status() {
         let (_dir, app, _, _, _) = node();
@@ -448,13 +679,119 @@ mod tests {
         assert_eq!(lines.len(), 1, "{logged}");
         let line = lines[0];
         let start = " INFO http: ledger=acme method=POST path=/ledgers/acme/graphql \
-                     operation=Books user=u_";
+                     operation=Books kind=query fields=verify user=u_";
         let user = line.split_once(start).unwrap_or_else(|| panic!("{line}")).1;
         let (id, rest) = user.split_once(' ').expect("fields after the user");
         assert_eq!(id.len(), 16, "{line}");
         assert!(id.bytes().all(|byte| byte.is_ascii_hexdigit()), "{line}");
         assert!(rest.starts_with("status=200 errors=0 ms="), "{line}");
         assert!(rest.ends_with(" client=198.51.100.4"), "{line}");
+    }
+
+    /// 010's follow-up: `fields` says what ran, whatever the client named it —
+    /// a request that names no operation, two aliases of one field (once),
+    /// the operation `operationName` picks out of two, fields in fragments at
+    /// the root, a field the schema does not have (it ran nothing, and the
+    /// line says what was asked), more than eight (`+N`), and an operation
+    /// named in the query alone, which runs; `-` where nothing runs — a query
+    /// that does not parse, an `operationName` it does not have, two
+    /// operations and no name.
+    ///
+    /// Bug-catch: leave `LogFields` off the ledgers' schema (NL-R23) and every
+    /// line says `fields=-`; log the alias (NL-R25) and `fields=a,b`; drop the
+    /// cap (NL-R26) and the eleven names are all on the line; ignore
+    /// `operationName` (NL-R29), follow no fragment (NL-R30), or take only an
+    /// unnamed operation without one (NL-R31) — a client hides what it runs
+    /// by naming its query and not its request — and that line is wrong;
+    /// show no kind (NL-R33) and no line says `kind=query`.
+    #[tokio::test]
+    async fn fields_say_what_ran_whatever_the_client_named_it() {
+        let (_dir, app, _, _, _) = node();
+        let sent = [
+            json!({ "query": "{ verify { ok } accounts { name } }" }),
+            json!({ "query": "{ a: verify { ok } b: verify { ok } }" }),
+            json!({
+                "query": "query First { verify { ok } } query Second { accounts { name } }",
+                "operationName": "Second",
+            }),
+            json!({
+                "query": "{ ...Books ... on QueryRoot { verify { ok } } } \
+                          fragment Books on QueryRoot { journal { txid } }",
+            }),
+            json!({ "query": "{ fooBar }" }),
+            json!({ "query": format!(
+                "{{ {} }}",
+                (0..11).map(|n| format!("f{n}")).collect::<Vec<_>>().join(" ")
+            ) }),
+            json!({ "query": "{ verify " }),
+            json!({ "query": "query Books { verify { ok } }" }),
+            json!({ "query": "{ verify { ok } }", "operationName": "Nope" }),
+            json!({ "query": "query A { verify { ok } } query B { accounts { name } }" }),
+        ];
+        let ((), logged) = capture_logs("info", async {
+            for body in &sent {
+                answer(
+                    &app,
+                    request("POST", "/graphql", Some(OPERATOR), body.clone(), PEER),
+                )
+                .await;
+            }
+        })
+        .await;
+        let lines = http_lines(&logged);
+        assert_eq!(lines.len(), sent.len(), "{logged}");
+        let expected = [
+            " operation=- kind=query fields=verify,accounts user=operator status=200 errors=0 ",
+            " operation=- kind=query fields=verify user=operator status=200 errors=0 ",
+            " operation=Second kind=query fields=accounts user=operator status=200 errors=0 ",
+            " operation=- kind=query fields=journal,verify user=operator status=200 errors=0 ",
+            " operation=- kind=query fields=fooBar user=operator status=200 errors=1 ",
+            " operation=- kind=query fields=f0,f1,f2,f3,f4,f5,f6,f7,+3 user=operator ",
+            " operation=- kind=- fields=- user=operator status=200 errors=1 ",
+            " operation=- kind=query fields=verify user=operator status=200 errors=0 ",
+            " operation=Nope kind=- fields=- user=operator status=200 errors=1 ",
+            " operation=- kind=- fields=- user=operator status=200 errors=1 ",
+        ];
+        for (line, expected) in lines.iter().zip(expected) {
+            assert!(line.contains(expected), "{expected:?} in {line}");
+        }
+    }
+
+    /// 010's follow-up: a request the caller's role does not allow still says
+    /// what it asked — a read key's `openAccount` is refused, and its line
+    /// says `kind=mutation fields=openAccount errors=1`.
+    ///
+    /// Bug-catch: read the fields after `AccessControl` judges the role
+    /// (`LogFields` registered before it, NL-R28) and a refused write says
+    /// `fields=-`: the attempt leaves no trace of what it was; call every
+    /// operation a query (NL-R32) and a refused write reads as a read.
+    #[tokio::test]
+    async fn a_refused_request_still_says_what_it_asked() {
+        let (_dir, app, _, _, _) = node();
+        let key = read_key(&app).await;
+        let ((status, body), logged) = capture_logs(
+            "info",
+            answer(
+                &app,
+                request(
+                    "POST",
+                    "/ledgers/acme/graphql",
+                    Some(&key),
+                    query(r#"mutation { openAccount(name: "Assets:Cash", date: "2026-01-01") }"#),
+                    PEER,
+                ),
+            ),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        assert!(body["errors"].is_array(), "refused: {body}");
+        let lines = http_lines(&logged);
+        assert_eq!(lines.len(), 1, "{logged}");
+        assert!(
+            lines[0].contains(" operation=- kind=mutation fields=openAccount user=u_"),
+            "{logged}"
+        );
+        assert!(lines[0].contains(" status=200 errors=1 "), "{logged}");
     }
 
     /// 010: every request writes its own line, a stranger's too — wrong
@@ -717,10 +1054,11 @@ mod tests {
     }
 
     /// 009, M-41: every line stays under 512 bytes, with the longest path,
-    /// operation name, ledger name and method a caller can send.
+    /// operation name, ledger name, method and fields (010) a caller can send.
     ///
     /// Bug-catch: log the method as sent (NL-R11) and a 10,000-byte
-    /// extension method is a 10,000-byte line.
+    /// extension method is a 10,000-byte line; give the fields no room limit
+    /// (NL-R27) and eight 63-byte fields make a line of about 750 bytes.
     #[tokio::test]
     async fn every_line_is_under_512_bytes() {
         let (_dir, app, _, _, _) = node();
@@ -747,6 +1085,23 @@ mod tests {
                 );
                 answer(&app, named).await;
             }
+            // The longest operation name, and twenty of the longest fields
+            // (010's follow-up): the fields take what room is left.
+            let operation = "B".repeat(64);
+            let fields: Vec<String> = (0..20)
+                .map(|n| format!("f{n:02}{}", "x".repeat(60)))
+                .collect();
+            let crowded = request(
+                "POST",
+                "/graphql",
+                Some(OPERATOR),
+                json!({
+                    "query": format!("query {operation} {{ {} }}", fields.join(" ")),
+                    "operationName": operation,
+                }),
+                [203, 0, 113, 5],
+            );
+            answer(&app, crowded).await;
             let method = "X".repeat(10_000);
             answer(
                 &app,
@@ -755,10 +1110,18 @@ mod tests {
             .await;
         })
         .await;
-        assert_eq!(http_lines(&logged).len(), 5, "{logged}");
+        assert_eq!(http_lines(&logged).len(), 6, "{logged}");
         for line in logged.lines() {
             assert!(line.len() < 512, "{} bytes: {line}", line.len());
         }
+        let crowded = logged
+            .lines()
+            .find(|line| line.contains(" client=203.0.113.5"))
+            .unwrap_or_else(|| panic!("{logged}"));
+        assert!(
+            crowded.contains(&format!(" fields=f00{},", "x".repeat(60))) && crowded.contains(",+"),
+            "some fields, then the count of the rest: {crowded}"
+        );
         assert!(
             logged.contains(&format!(" operation={} ", "B".repeat(64))),
             "{logged}"
@@ -825,7 +1188,7 @@ mod tests {
         let lines = http_lines(&logged);
         assert_eq!(lines.len(), 1, "{logged}");
         assert!(
-            lines[0].contains(" WARN http: ledger=acme method=POST path=/ledgers/acme/graphql operation=- user=operator status=503 "),
+            lines[0].contains(" WARN http: ledger=acme method=POST path=/ledgers/acme/graphql operation=- kind=- fields=- user=operator status=503 "),
             "{logged}"
         );
         assert!(!lines[0].contains("suppressed="), "{logged}");
@@ -860,7 +1223,7 @@ mod tests {
         let lines = http_lines(&logged);
         assert_eq!(lines.len(), 1, "{logged}");
         assert!(
-            lines[0].contains(" WARN http::stranger: ledger=acme method=POST path=/ledgers/acme/graphql operation=- user=- status=- "),
+            lines[0].contains(" WARN http::stranger: ledger=acme method=POST path=/ledgers/acme/graphql operation=- kind=- fields=- user=- status=- "),
             "{logged}"
         );
         assert!(lines[0].ends_with(" cut_short=true"), "{logged}");
@@ -894,7 +1257,7 @@ mod tests {
         assert_eq!(lines.len(), 3, "{logged}");
         for line in &lines[..2] {
             assert!(
-                line.contains(" INFO http::stranger: ledger=default method=GET path=/health operation=- user=- status=200 "),
+                line.contains(" INFO http::stranger: ledger=default method=GET path=/health operation=- kind=- fields=- user=- status=200 "),
                 "{logged}"
             );
         }

@@ -124,3 +124,68 @@ to commit. The commit hash is filled in once the maintainer has committed.
   and logged a stranger's `/health` again. Gate: 1773 passed, 0 failed, 0
   ignored.
 - **Commit:** b83fb6a
+
+## 2026-11-24 — `kind=` and `fields=`: what ran (follow-up)
+
+- **What changed:** the request line names what ran, between `operation=`
+  and `user=`: `kind=` (`query`, `mutation` or `subscription`, the
+  maintainer's ask on 2026-11-24: "what operation was made, be it a query or
+  a mutation, without seeing the request data") and `fields=`, the root fields of the operation the node parsed
+  (`fields=syncBank`, `fields=bankInbox,connectedBanks`), whatever the
+  client named its request, or if it named none — `operation` is only the
+  client's label (the maintainer asked for this after the first Plaid
+  sandbox run, where every line said `operation=-`). A schema extension,
+  `request_log::LogFields`, reads them from the node's own parse (no second
+  parse) into a slot the GraphQL handlers give the request, on the ledgers'
+  schema after `AccessControl` — so a refused request still says what it
+  asked — and on the node endpoint's. The field, never its alias, arguments
+  or values; each once, in the query's order; fragments at the root
+  followed, each once; the operation the schema runs, picked as
+  `Schema::execute` picks it (by `operationName`, or the query's only one,
+  named or not; none, `-`, where it runs none); a name the schema lacks shown (syntax-checked, at most 64 characters, `?`
+  otherwise); at most eight, then `+N`, and fewer when the line has no room
+  under 512 bytes (the rest of the line is measured first); `-` when no
+  query was parsed. README *Request log*, CHANGELOG *Added* (a field
+  inserted: something reading by position must adapt);
+  `scripts/rehearse_install.sh`'s checks take it (not run: it needs the
+  Lima VMs).
+- **Tests:** `fields_say_what_ran_whatever_the_client_named_it` (ten
+  requests: unnamed, aliases, two operations, fragments, an unknown field,
+  eleven fields, a query that does not parse, an operation named in the
+  query alone, an `operationName` the query lacks, two operations and no
+  name),
+  `a_refused_request_still_says_what_it_asked` (a read key's
+  `openAccount`), `the_node_endpoints_line_says_what_ran`;
+  `every_line_is_under_512_bytes` adds a 64-character operation with twenty
+  63-character fields; the four lines' tests and the shipped binary's take
+  the field.
+- **Gate:** `scripts/gate.sh` — 1778 passed, 0 failed, 0 ignored.
+- **Revert checks:** NL-R23 to NL-R33 in `node_logs.json` (the extension
+  off either schema, the alias logged, no cap, no room limit, the fields
+  read after the role check, `operationName` ignored, no fragment followed,
+  a lone named operation taken for none, a mutation logged as a query, no
+  kind on the line) — 11 of 11 bite. NL-R2 and
+  `users.json`'s U-R1 anchored on code this changed: re-anchored, both
+  bite; every anchor in the 18 files occurs once (458 checks).
+- **Review of `kind=`:** nothing important. Taken: README says `kind` is
+  `-` only when no operation is picked (a refused role, a field the node
+  lacks still show their kind) and lists the last `-` for `fields` (a
+  spread of a fragment the query lacks); the CHANGELOG's request-log field
+  list names `kind` and `fields`, and its by-position warning is gone (the
+  request log is unreleased); the module doc names `kind`.
+- **Review:** one important finding, fixed: a query whose one operation is
+  named, sent without `operationName`, runs (async-graphql files a named
+  operation under `Multiple` even alone, and runs it when it is the only
+  one) but logged `fields=-` — any key holder could hide what it ran; the
+  operation is now picked exactly as `Schema::execute` picks it, with three
+  more cases and NL-R29 to NL-R31 (the operation choice and fragments had
+  no revert check). Taken: README says what was asked shows even when it
+  did not run (`@skip`, a missing field, a refused role) and lists every `-`;
+  NL-R27's line is about 750 bytes, not 1,500; two stale doc comments.
+  Reported, not this change: async-graphql's own recursive-depth check
+  follows fragment spreads without remembering them, so a small query of
+  fragments that each spread the next twice may cost about 2^31 steps
+  before the depth limit (not run; needs a key).
+- **Also:** `007`'s last entry gets its commit, `62fd6be`.
+- **Departures from the plan:** none (a follow-up).
+- **Commit:** —

@@ -1,8 +1,8 @@
 {
   "U-R1-schema-without-access-control": {
     "file": "crates/gl-node/src/graphql/mod.rs",
-    "old": "        .extension(crate::access_control::AccessControl);",
-    "new": "        ;",
+    "old": "        .extension(crate::access_control::AccessControl)\n",
+    "new": "",
     "runs": [
       [
         "-p",

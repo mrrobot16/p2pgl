@@ -37,7 +37,7 @@ use crate::config::{
 use crate::ledger_runtime::{self, NodeSettings, RunningLedger};
 use crate::ledgers::{LedgerState, Ledgers, Taken};
 use crate::mesh_invite::{self, MeshLine, INVITE_PREFIX, REPLY_PREFIX};
-use crate::request_log::RequestNote;
+use crate::request_log::{RequestNote, RootFields};
 
 /// The longest `ledger.json` `addLedger` writes: settings are a few hundred
 /// bytes; a long allowlist fits many times over.
@@ -1112,6 +1112,7 @@ pub(crate) fn node_schema(admin: Arc<NodeAdmin>, introspection: bool) -> NodeSch
     let mut builder = Schema::build(NodeQuery, NodeMutation, EmptySubscription)
         .limit_depth(crate::graphql::GRAPHQL_MAX_DEPTH)
         .limit_complexity(NODE_MAX_COMPLEXITY)
+        .extension(crate::request_log::LogFields)
         .data(admin);
     if !introspection {
         builder = builder.disable_introspection();
@@ -1127,6 +1128,8 @@ pub(crate) async fn node_graphql(
 ) -> Response {
     let request = request.into_inner();
     let operation_name = request.operation_name.clone();
+    let fields = RootFields::new(operation_name.as_deref());
+    let request = request.data(fields.clone());
     let response = match crate::spawn_detached_in_span(async move { schema.execute(request).await })
         .await
     {
@@ -1145,6 +1148,7 @@ pub(crate) async fn node_graphql(
         operation_name.as_deref(),
         errors,
     )
+    .with_fields(&fields)
     .attach(response)
 }
 
@@ -1974,6 +1978,34 @@ mod tests {
         }
         let (status, body) = post(&node.app, "/node/graphql", Some(OPERATOR), list).await;
         assert_eq!(status, StatusCode::OK, "{body}");
+        node.admin.stop_all().await;
+    }
+
+    /// 010's follow-up: the node endpoint's request line says what ran —
+    /// `fields=ledgers` — for a request that names no operation.
+    ///
+    /// Bug-catch: leave `LogFields` off the node schema (NL-R24) and its
+    /// lines say `fields=-` whatever the operator added or removed.
+    #[tokio::test]
+    async fn the_node_endpoints_line_says_what_ran() {
+        let node = node().await;
+        let ((status, body), logged) = crate::test_support::capture_logs(
+            "info",
+            post(
+                &node.app,
+                "/node/graphql",
+                Some(OPERATOR),
+                json!({ "query": "{ ledgers { name } }" }),
+            ),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        assert!(
+            logged.lines().any(|line| line.contains(
+                " path=/node/graphql operation=- kind=query fields=ledgers user=operator status=200 "
+            )),
+            "{logged}"
+        );
         node.admin.stop_all().await;
     }
 

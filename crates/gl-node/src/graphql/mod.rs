@@ -24,7 +24,7 @@ use mutation::MutationRoot;
 use query::QueryRoot;
 use subscription::SubscriptionRoot;
 
-use crate::request_log::RequestNote;
+use crate::request_log::{RequestNote, RootFields};
 
 /// Shared ledger state — `Arc<RwLock<LedgerService>>` for concurrent access.
 ///
@@ -58,7 +58,10 @@ fn schema_builder(
     let mut builder = Schema::build(QueryRoot, MutationRoot, SubscriptionRoot)
         .limit_depth(GRAPHQL_MAX_DEPTH)
         .limit_complexity(GRAPHQL_MAX_COMPLEXITY)
-        .extension(crate::access_control::AccessControl);
+        .extension(crate::access_control::AccessControl)
+        // After AccessControl: it reads what a request runs before the role
+        // is judged, so a refused request's line says what it asked (010).
+        .extension(crate::request_log::LogFields);
     if !enable_introspection {
         builder = builder.disable_introspection();
     }
@@ -170,7 +173,7 @@ impl ExecuteAsOperator for AppSchema {
 /// reached here without one is refused there.
 ///
 /// 009: the answer carries a [`RequestNote`]: who asked, the operation's
-/// name and the count of errors, for its request line.
+/// name, what ran (010) and the count of errors, for its request line.
 pub async fn graphql_handler(
     State(schema): State<AppSchema>,
     caller: Option<axum::Extension<crate::access_control::Caller>>,
@@ -179,6 +182,8 @@ pub async fn graphql_handler(
     let mut request = request.into_inner().data(types::NamesSnapshot::default());
     let caller = caller.map(|axum::Extension(caller)| caller);
     let operation_name = request.operation_name.clone();
+    let fields = RootFields::new(operation_name.as_deref());
+    request = request.data(fields.clone());
     if let Some(caller) = &caller {
         request = request.data(caller.clone());
     }
@@ -188,9 +193,9 @@ pub async fn graphql_handler(
     // Only with a caller (review): without one — never, behind auth — the
     // line says `user=-`, as for any answer nobody behind a key made.
     match &caller {
-        Some(caller) => {
-            RequestNote::new(Some(caller), operation_name.as_deref(), errors).attach(response)
-        }
+        Some(caller) => RequestNote::new(Some(caller), operation_name.as_deref(), errors)
+            .with_fields(&fields)
+            .attach(response),
         None => response,
     }
 }

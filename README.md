@@ -749,9 +749,9 @@ let through to GraphQL (and a busy ledger's 503 to a key holder),
 since `/health` checks the key itself:
 
 ```
-INFO http: ledger=acme method=POST path=/ledgers/acme/graphql operation=AddTransaction user=u_7f3a09c1d2e4b5a6 status=200 errors=0 ms=12 client=203.0.113.9
-WARN http::stranger: ledger=acme method=POST path=/ledgers/acme/graphql operation=- user=- status=401 errors=0 ms=0 client=198.51.100.4
-INFO http::stranger: ledger=default method=GET path=/health operation=- user=- status=200 errors=0 ms=0 client=127.0.0.1
+INFO http: ledger=acme method=POST path=/ledgers/acme/graphql operation=AddTransaction kind=mutation fields=appendTransaction user=u_7f3a09c1d2e4b5a6 status=200 errors=0 ms=12 client=203.0.113.9
+WARN http::stranger: ledger=acme method=POST path=/ledgers/acme/graphql operation=- kind=- fields=- user=- status=401 errors=0 ms=0 client=198.51.100.4
+INFO http::stranger: ledger=default method=GET path=/health operation=- kind=- fields=- user=- status=200 errors=0 ms=0 client=127.0.0.1
 ```
 
 - `ledger` is the company (`default` for `/graphql` and `/health`, `-` for
@@ -760,7 +760,29 @@ INFO http::stranger: ledger=default method=GET path=/health operation=- user=- s
   `?` when it is not a GraphQL name of at most 64 characters. Naming the
   operation in the query (`mutation SyncBank(…)`) is not enough: send the
   name as `operationName` too, as every request in
-  `docs/api/openledger.insomnia.json` does.
+  `docs/api/openledger.insomnia.json` does. It is the client's label for its
+  request, not what ran; `kind` and `fields` are that.
+- `kind` is whether the request was a `query` (it reads), a `mutation` (it
+  can change something) or a `subscription`: the kind of the operation the
+  node picks to run, as `fields` below says, whatever the client named it.
+  `-` when the node picks no operation; a kind shows when the operation it
+  picked then ran nothing, as `fields` does (a refused role, a field it
+  does not have).
+- `fields` is what the request ran, or asked to: the root fields of the
+  operation the node picks to run — the one `operationName` names, or the
+  query's only one, named or not — whatever the client called its request
+  or whether it named it: `fields=syncBank`, `fields=bankInbox,connectedBanks`.
+  The field, never its alias or its arguments, each once, in the query's
+  order; fields in fragments at the root count. What was asked shows even
+  when it did not run: a field the node does not have (`errors=1`), a request
+  the key's role does not allow, a field skipped with `@skip(if: true)`. At
+  most eight, then `+N` for the rest — fewer when the line has no room left
+  under 512 bytes. `-` when the node read no query or would run none: a
+  stranger's request, `/health`, the Plaid webhook, a busy ledger's 503, a
+  query that does not parse or is past the parser's limits, an
+  `operationName` the query does not have, or several operations and no
+  `operationName`; and when the operation it picked has no field it could
+  name (only a spread of a fragment the query lacks).
 - `user` is the person's user id, `operator`, or `-` when no key let the
   request through to a handler. On a loopback node with `auth.enabled:
   false` every caller is the operator.

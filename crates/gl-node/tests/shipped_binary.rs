@@ -588,7 +588,7 @@ fn with_auth_off_a_loopback_node_still_serves_its_operator() {
 }
 
 /// 009: the shipped binary, its stdout a file as under `docker logs`, writes
-/// one line for a keyed request — the ledger, the operator, the status, no
+/// one line for a keyed request — the ledger, what ran, the operator, the status, no
 /// key — and its log is plain text: no colour codes anywhere.
 ///
 /// Bug-catch: turn colour on whatever stdout is (NL-R7) and every line of
@@ -605,7 +605,7 @@ fn the_shipped_binary_logs_each_request_in_plain_text() {
     let log = node.log("request-log");
     assert!(
         log.lines().any(|line| line.contains(
-            " INFO http: ledger=default method=POST path=/graphql operation=- user=operator \
+            " INFO http: ledger=default method=POST path=/graphql operation=- kind=query fields=verify user=operator \
              status=200 errors=0 ms="
         )),
         "{log}"

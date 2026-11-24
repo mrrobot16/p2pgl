@@ -11,10 +11,10 @@ break compatibility.
 
 - **A request log** (009 unit 1, 010): the node writes one line for every
   HTTP request, target `http`, like a Heroku router line — `ledger method
-  path operation user status errors ms client`. `INFO` below 400 (a passing
-  `/health` included), `WARN` for 4xx, 5xx and a request cut short (a
-  refused or failed request, not a fault of the node). A request no key let
-  through to GraphQL has the target `http::stranger` (every `/health` too). On by default;
+  path operation kind fields user status errors ms client`. `INFO` below
+  400 (a passing `/health` included), `WARN` for 4xx, 5xx and a request
+  cut short (a refused or failed request, not a fault of the node). A
+  request no key let through to GraphQL has the target `http::stranger` (every `/health` too). On by default;
   `RUST_LOG=…,http=off` turns it off, `…,http::stranger=off` strangers'
   lines only. README *Request log*.
 - **Plain text off a terminal:** the node's log has no colour codes when its
@@ -43,6 +43,15 @@ break compatibility.
 - **Every request in `docs/api/openledger.insomnia.json` is named** and
   sends its `operationName`, so the request log shows `operation=SyncBank`
   rather than `-`.
+- **`kind=` and `fields=` in the request line** (010's follow-up): what ran
+  — whether a `query` or a `mutation`, and the root fields of the operation
+  the node runs (`kind=mutation fields=syncBank`,
+  `kind=query fields=bankInbox,connectedBanks`) — whatever the client named
+  its request, or if it named none; what was asked shows too when it did not
+  run (a field the node lacks, a role that does not allow it). Never an
+  alias, an argument or a value; at most eight, then `+N`, within the
+  line's 512 bytes; `-` when the node read no query or would run none.
+  README *Request log*.
 
 ### Security
 
