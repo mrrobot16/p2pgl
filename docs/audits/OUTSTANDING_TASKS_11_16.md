@@ -90,17 +90,24 @@ request lines (009) with them.
 default applies. An operator who sets one still replaces it, as the README
 says (*Log volume on a public bind*). An installed server takes it when it
 upgrades to a release that has it: the installer tags its image by the
-binary's digest and the base image, so a new binary builds a new image from
-the new installer — with `openledger upgrade --version X.Y.Z`, which fetches
-that release's installer. **Residuals:**
+binary's digest, the base image and (since 0.5.0's preparation) the image's
+definition, so a new installer builds a new image — with `openledger upgrade
+--version X.Y.Z`, which fetches that release's installer, or `--installer`.
+**Residuals:**
 
 - `openledger upgrade --binary FILE` alone runs the installer already on the
   server: on a server installed before this fix, that one still writes
   `RUST_LOG=info` into the new image. Upgrade with `--version`, or give
   `--binary FILE --installer NEW_INSTALL_SH`.
-- Re-running an installer with the same binary keeps the image it already
+- ~~Re-running an installer with the same binary keeps the image it already
   has (the tag is the binary's digest and the base image, not the image's
-  definition); a rollback runs the previous release's image, as it should.
+  definition)~~ — fixed in 0.5.0's release preparation (2026-11-24, found
+  by its review): the tag also covers the image's definition, so 0.5.0's
+  installer builds its own image even where 0.4.0's built one for the same
+  binary (`--binary` alone, then `--installer`). Test
+  `the_installers_image_tag_covers_its_definition`, revert check L159-R4.
+  A rollback still runs the previous release's image, as it should: each
+  release's installer computes its own tags.
 - Nothing pins `main`'s fallback to `DEFAULT_LOG_FILTER` when `RUST_LOG` is
   unset (`main.rs`, the subscriber's `EnvFilter`): T77's test builds its
   filter from the constant. A gap since T77, not opened here.
@@ -116,9 +123,26 @@ that release's installer. **Residuals:**
 - Revert checks: L159-R1 (`Dockerfile`), L159-R2 (`install.sh`'s image) and
   L159-R3 (`docker-compose.yml`) in `scripts/revert_specs/node_logs.json`,
   each `RUST_LOG=info` put back: 3 of 3 bite.
-- CHANGELOG `[Unreleased]` *Security*.
+- Added in 0.5.0's preparation: test
+  `config::tests::the_installers_image_tag_covers_its_definition` and
+  L159-R4 (the definition left out of the tag): bites.
+- CHANGELOG `[0.5.0]` *Security*.
 
 **Commit:** b83fb6a (with 010).
+
+## ☐ T106 — `chrono` is unmaintained (RUSTSEC-2026-0543) — watch
+
+Found 2026-11-24 by 0.5.0's `cargo audit`, as an allowed warning (it does not
+stop a release). Unlike `paste` and `rustix`, which come in through other
+crates, `chrono` is a direct dependency of every workspace crate (the root
+`Cargo.toml`): dates in the ledger, the API's scalars, the logs' times.
+The advisory names no fixed version and suggests `jiff` or `time`.
+
+**Not a finding:** no fault is known in the code we use; unmaintained means
+no fixes will come. **To do, when someone picks it up:** see whether a
+maintained fork or release appears; otherwise weigh moving to `jiff` or
+`time` — every date parse and format in four crates, and the ledger's date
+rules, which must not change. Watch the weekly audit (`weekly-health.yml`).
 
 ## Accepted by the maintainer
 

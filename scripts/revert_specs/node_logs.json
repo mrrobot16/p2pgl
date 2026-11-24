@@ -237,6 +237,20 @@
       ]
     ]
   },
+  "L159-R4-the-image-tag-leaves-out-its-definition": {
+    "file": "deploy/install/install.sh",
+    "old": "  printf '%s\\n' \"$NODE_BASE\"\n  printf '%s\\n' \"$image_definition\" | sha256sum\n",
+    "new": "  printf '%s\\n' \"$NODE_BASE\"\n",
+    "runs": [
+      [
+        "-p",
+        "gl-node",
+        "--bin",
+        "gl-node",
+        "the_installers_image_tag_covers_its_definition"
+      ]
+    ]
+  },
   "NL-R17-a-request-without-a-note-left-out": {
     "file": "crates/gl-node/src/request_log.rs",
     "old": "    let level = level_of(status);\n",

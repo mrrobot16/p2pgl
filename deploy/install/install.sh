@@ -222,19 +222,10 @@ else
   install -m 0755 "$work/$file" "$work/gl-node"
   source_note="release $version, matching its SHA256SUMS"
 fi
-# One tag per binary and base, however the binary came (a release, or
-# --binary): a rollback reinstalling the previous binary finds the image it
-# ran before, and builds nothing.
-digest=$({ sha256sum < "$work/gl-node"; printf '%s\n' "$NODE_BASE"; } | sha256sum | cut -c1-12)
-tag="openledger/gl-node:$digest-u$node_uid"
-if docker image inspect "$tag" >/dev/null 2>&1; then
-  same "image $tag"
-else
-  install -m 0755 "$work/gl-node" "$ETC/image/gl-node"
-  # No RUST_LOG in the image: one replaces the node's own filter,
-  # `info,iroh::protocol=error`, and with it the L-72 bound on iroh's
-  # per-handshake warnings (L-159).
-  cat > "$ETC/image/Dockerfile" <<EOF
+# The node's image as this installer writes it. No RUST_LOG in it: one
+# replaces the node's own filter, `info,iroh::protocol=error`, and with it the
+# L-72 bound on iroh's per-handshake warnings (L-159).
+image_definition=$(cat <<EOF
 # Written by the openledger installer: the node's image, the project's runtime
 # stage (Dockerfile, AS runtime) around the binary it was given, its user the
 # host's $NODE_USER account ($node_uid:$node_gid).
@@ -253,6 +244,23 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \\
     CMD ["/usr/local/bin/gl-node", "--health-check"]
 ENTRYPOINT ["gl-node"]
 EOF
+)
+# One tag per binary, base and image definition, however the binary came (a
+# release, or --binary): a rollback reinstalling the previous binary finds the
+# image it ran before, and builds nothing; an installer that writes a
+# different image builds its own, rather than taking one an older installer
+# built for the same binary (its RUST_LOG=info, L-159, kept for good).
+digest=$({
+  sha256sum < "$work/gl-node"
+  printf '%s\n' "$NODE_BASE"
+  printf '%s\n' "$image_definition" | sha256sum
+} | sha256sum | cut -c1-12)
+tag="openledger/gl-node:$digest-u$node_uid"
+if docker image inspect "$tag" >/dev/null 2>&1; then
+  same "image $tag"
+else
+  install -m 0755 "$work/gl-node" "$ETC/image/gl-node"
+  printf '%s\n' "$image_definition" > "$ETC/image/Dockerfile"
   chmod 0644 "$ETC/image/Dockerfile"
   docker build -q -t "$tag" "$ETC/image" >/dev/null || fail "the node's image did not build"
   reported=$(docker run --rm "$tag" --version) || fail "the node's binary does not run in its image"

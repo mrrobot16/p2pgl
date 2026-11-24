@@ -403,7 +403,16 @@ binary, on one machine (`docs/RELEASE.md`).
   request-log` and builds an image that sets no `RUST_LOG` (L-159), so the
   node's own filter keeps a stranger's failed handshakes out of the log.
   `--binary` alone runs the 0.4.0 installer, whose image still sets
-  `RUST_LOG=info`: add `--installer` with 0.5.0's `install.sh`.
+  `RUST_LOG=info`: add `--installer` with 0.5.0's `install.sh`. A server
+  already upgraded that way is put right by the same command: 0.5.0's
+  installer names the image by its definition too, so it builds a new one
+  rather than keep the one 0.4.0's installer built: the upgrade lists
+  `image openledger/gl-node:… (gl-node 0.5.0, …)`, not `(unchanged)`. That
+  run is an upgrade of its own, so `openledger rollback` afterwards goes
+  back to the run before it — the 0.5.0 binary in 0.4.0's installer's image
+  — not to 0.4.0 (it keeps one step only): to go back to 0.4.0 from there,
+  follow *Rolling back* by hand, with the backup taken before the first
+  upgrade.
 - **The log grows:** every HTTP request writes a line, strangers' and
   `/health` included. `openledger request-log key-holders` keeps only the
   requests a key let through; `off` none (README *Request log*).

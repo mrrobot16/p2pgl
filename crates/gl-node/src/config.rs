@@ -4219,7 +4219,7 @@ mod tests {
             ),
             (
                 "install.sh's image",
-                heredoc(&installer, r#"cat > "$ETC/image/Dockerfile" <<EOF"#),
+                heredoc(&installer, r#"image_definition=$(cat <<EOF"#),
             ),
             (
                 "install.sh's compose.yml",
@@ -4238,6 +4238,48 @@ mod tests {
                  node's own filter, L-159)"
             );
         }
+    }
+
+    /// 0.5.0's review of L-159: the installer names the node's image by the
+    /// binary, the base **and the image's definition**, and builds the
+    /// Dockerfile from that same definition — so an installer that writes a
+    /// different image (0.5.0's, without `RUST_LOG`) builds its own, and never
+    /// takes the image an older installer built for the same binary.
+    ///
+    /// Bug-catch: leave the definition out of the tag (L159-R4) and a server
+    /// upgraded with `--binary` alone — 0.4.0's installer, its image setting
+    /// `RUST_LOG=info` — keeps that image when 0.5.0's installer runs, and
+    /// L-159 with it, the upgrade saying only that the image is the same.
+    #[test]
+    fn the_installers_image_tag_covers_its_definition() {
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let installer =
+            std::fs::read_to_string(root.join("deploy/install/install.sh")).expect("install.sh");
+        let lines: Vec<&str> = installer.lines().collect();
+        let start = lines
+            .iter()
+            .position(|line| *line == "digest=$({")
+            .expect("install.sh computes the image's digest");
+        let digest: Vec<&str> = lines[start..]
+            .iter()
+            .take_while(|line| !line.starts_with('}'))
+            .copied()
+            .collect();
+        for input in [
+            r#"sha256sum < "$work/gl-node""#,
+            r#"printf '%s\n' "$NODE_BASE""#,
+            r#"printf '%s\n' "$image_definition" | sha256sum"#,
+        ] {
+            assert!(
+                digest.iter().any(|line| line.trim() == input),
+                "the image's tag does not cover {input}: {digest:?}"
+            );
+        }
+        assert!(
+            lines.iter().any(|line| line.trim()
+                == r#"printf '%s\n' "$image_definition" > "$ETC/image/Dockerfile""#),
+            "the Dockerfile built is not the definition the tag covers"
+        );
     }
 
     /// 010: `openledger request-log` and `run_local_node.sh` write filters

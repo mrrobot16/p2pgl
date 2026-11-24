@@ -88,14 +88,29 @@ installer's image).
 
 ### Security
 
+- Dependencies (`Cargo.lock` only): `url` 2.5.8 to 2.5.9, and
+  `form_urlencoded` 1.2.2 to 1.2.3 with it, compiled in through iroh,
+  hickory, reqwest and tower-http, for RUSTSEC-2026-0592 (a stack overflow
+  in `Url::origin()` on nested `blob:` URLs; no code of ours calls it),
+  published 2026-11-20 and caught by the release's audit. `cargo audit`
+  then finds no vulnerability; three allowed warnings remain: `paste`
+  unmaintained (RUSTSEC-2024-0436) and `rustix` 1.1.4 unsound
+  (RUSTSEC-2026-0486), as in 0.4.0, and now `chrono` unmaintained
+  (RUSTSEC-2026-0543): unlike those two, a direct dependency, with no
+  fixed version; tracked as T106.
 - The Docker images no longer set `RUST_LOG=info` (L-159): it replaced the
   node's own filter, `info,iroh::protocol=error`, so every node run from an
   image — the installer's included — logged one `WARN` from iroh per failed
   handshake on its public QUIC port, unthrottled (what L-72's filter is
   for). An installed server takes the fix when it upgrades to a release
   with it (`openledger upgrade --version …`; `--binary` alone runs the old
-  installer, which still writes it: add `--installer`). If you run the
-  image with your own `RUST_LOG`, keep `iroh::protocol=error` in it.
+  installer, which still writes it: add `--installer`). The installer now
+  names the node's image by its definition as well as the binary and the
+  base, so it builds its own image even where an older installer built one
+  for the same binary — before, it kept the image an older installer had
+  built, `RUST_LOG=info` and all, and listed it as `(unchanged)`. If you
+  run the image with your own `RUST_LOG`, keep `iroh::protocol=error` in
+  it.
 - The request log never carries the key, a header, the body, the query
   text, its variables or the URL's query string, and every value a caller
   chose is checked or escaped (CR and LF included, which tracing does not
